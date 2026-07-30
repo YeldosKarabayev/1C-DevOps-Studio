@@ -227,3 +227,21 @@ select:focus, input:focus, textarea:focus { border-color: var(--accent); }
 ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 8px; }
 ::-webkit-scrollbar-thumb:hover { background: var(--text-mut); }
 .empty { padding: 24px 16px; color: var(--text-mut); text-align: center; font-size: 12.5px; }
+
+/* новые элементы */
+.card.highlight { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent) inset, var(--shadow); }
+.act.primary-act { background: linear-gradient(135deg, var(--accent), var(--accent-2)); color: #fff; border-color: transparent; font-weight: 700; }
+.act.primary-act:hover { filter: brightness(1.08); }
+.branch-box .mini { padding: 4px 8px; }
+.amend-lbl { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text-mut); margin-bottom: 8px; cursor: pointer; }
+.amend-lbl input { width: auto; }
+.lint-list { padding: 8px 0; overflow: auto; }
+.lint-row { padding: 9px 16px; border-bottom: 1px solid var(--border); cursor: default; }
+.lint-row .lint-top { display: flex; align-items: center; gap: 8px; }
+.lint-sev { font-size: 10px; font-weight: 800; padding: 1px 7px; border-radius: 6px; text-transform: uppercase; }
+.lint-sev.critical { background: rgba(248,81,73,.18); color: var(--danger); }
+.lint-sev.high { background: rgba(210,153,34,.18); color: var(--warn); }
+.lint-sev.info { background: rgba(79,140,255,.18); color: var(--accent); }
+.lint-loc { font-family: Consolas, monospace; color: var(--text-mut); font-size: 12px; }
+.lint-msg { margin-top: 4px; color: var(--text-dim); }
+.lint-code { margin-top: 4px; font-family: Consolas, monospace; font-size: 12px; color: var(--text-mut); white-space: pre-wrap; }

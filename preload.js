@@ -27,9 +27,21 @@ contextBridge.exposeInMainWorld('api', {
     pull: (repo) => ipcRenderer.invoke('git:pull', repo),
     fetch: (repo) => ipcRenderer.invoke('git:fetch', repo),
     checkout: (repo, branch) => ipcRenderer.invoke('git:checkout', { repo, branch }),
+    branchCreate: (repo, name) => ipcRenderer.invoke('git:branchCreate', { repo, name }),
+    branchDelete: (repo, name) => ipcRenderer.invoke('git:branchDelete', { repo, name }),
+    merge: (repo, name) => ipcRenderer.invoke('git:merge', { repo, name }),
+    clone: (url, dir) => ipcRenderer.invoke('git:clone', { url, dir }),
+    discard: (repo, file, untracked) => ipcRenderer.invoke('git:discard', { repo, file, untracked }),
+    stashPush: (repo) => ipcRenderer.invoke('git:stashPush', repo),
+    stashPop: (repo) => ipcRenderer.invoke('git:stashPop', repo),
+    stashList: (repo) => ipcRenderer.invoke('git:stashList', repo),
+    amend: (repo, message) => ipcRenderer.invoke('git:amend', { repo, message }),
   },
   onec: {
     exec: (req) => ipcRenderer.invoke('onec:exec', req),
+  },
+  bsl: {
+    lint: (repo) => ipcRenderer.invoke('bsl:lint', repo),
   },
   onProc: (cb) => {
     ipcRenderer.on('proc:begin', (_e, d) => cb('begin', d));

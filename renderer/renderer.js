@@ -22,6 +22,7 @@ async function init() {
   wireGitActions();
   wireOnec();
   wireSettings();
+  wireExtra();
   repo = currentRepoPath();
   await refreshRepo();
 }
@@ -159,8 +160,16 @@ function bindChangeRows(sel, staged) {
       const diff = await api.git.diffFile(repo, r.dataset.file, staged);
       $('#changeDiff').innerHTML = colorizeDiff(diff);
     };
-    const act = r.querySelector('.file-act');
-    if (act) act.onclick = async () => {
+    const discardBtn = r.querySelector('.file-act.discard');
+    if (discardBtn) discardBtn.onclick = async (e) => {
+      e.stopPropagation();
+      if (!confirm(`Отменить изменения в файле?\n${r.dataset.file}`)) return;
+      await api.git.discard(repo, r.dataset.file, r.dataset.code === '?');
+      loadStatus();
+    };
+    const act = r.querySelector('.file-act:not(.discard)');
+    if (act) act.onclick = async (e) => {
+      e.stopPropagation();
       if (staged) await api.git.unstage(repo, r.dataset.file);
       else await api.git.stage(repo, r.dataset.file);
       loadStatus();
@@ -176,8 +185,77 @@ function wireGitActions() {
   $('#btnCommit').onclick = async () => {
     const msg = $('#commitMsg').value.trim();
     if (!msg) { toastConsole('Введите сообщение коммита', 'stderr'); return; }
-    await run(() => api.git.commit(repo, msg), () => { $('#commitMsg').value = ''; loadStatus(); loadLog(); refreshRepo(); });
+    const amend = $('#amendChk').checked;
+    const fn = amend ? () => api.git.amend(repo, msg) : () => api.git.commit(repo, msg);
+    await run(fn, () => { $('#commitMsg').value = ''; $('#amendChk').checked = false; loadStatus(); loadLog(); refreshRepo(); });
   };
+}
+
+function wireExtra() {
+  // Ветки
+  $('#branchNew').onclick = async () => {
+    const v = await modalPrompt('Новая ветка', [{ key: 'name', label: 'Имя ветки' }]);
+    if (v && v.name) await run(() => api.git.branchCreate(repo, v.name.trim()), () => { refreshRepo(); loadLog(); });
+  };
+  $('#branchMerge').onclick = async () => {
+    const v = await modalPrompt('Слить ветку в текущую', [{ key: 'name', label: 'Какую ветку слить' }]);
+    if (v && v.name) await run(() => api.git.merge(repo, v.name.trim()), () => { refreshRepo(); loadLog(); });
+  };
+  $('#branchDel').onclick = async () => {
+    const cur = $('#branchSelect').value;
+    const v = await modalPrompt('Удалить ветку', [{ key: 'name', label: 'Имя ветки (не текущую)', value: '' }]);
+    if (v && v.name) {
+      if (v.name.trim() === cur) { toastConsole('Нельзя удалить текущую ветку', 'stderr'); return; }
+      await run(() => api.git.branchDelete(repo, v.name.trim()), refreshRepo);
+    }
+  };
+  // Stash
+  $('#btnStash').onclick = () => run(() => api.git.stashPush(repo), loadStatus);
+  $('#btnStashPop').onclick = () => run(() => api.git.stashPop(repo), () => { loadStatus(); loadLog(); });
+  // BSL проверка
+  $('#btnLint').onclick = async () => {
+    $('#changeHead').textContent = 'Проверка BSL';
+    $('#changeDiff').innerHTML = '<div class="empty">Анализ…</div>';
+    const res = await api.bsl.lint(repo);
+    renderLint(res);
+  };
+  // Clone
+  $('#pickCloneDir').onclick = async () => { const d = await api.dialog.pickDir(); if (d) $('#cloneDir').value = d; };
+  $('#btnClone').onclick = async () => {
+    const url = $('#cloneUrl').value.trim();
+    const dir = $('#cloneDir').value.trim();
+    if (!url || !dir) { toastConsole('Укажите URL и целевую папку', 'stderr'); return; }
+    await run(() => api.git.clone(url, dir), () => toastConsole('Готово. Добавьте склонированный репозиторий в список выше.', 'ok'));
+  };
+}
+
+function renderLint(res) {
+  const findings = (res && res.findings) || [];
+  const head = `Проверка BSL — файлов: ${res ? res.files : 0}, находок: ${findings.length}`;
+  $('#changeHead').textContent = head;
+  if (!findings.length) { $('#changeDiff').innerHTML = '<div class="empty">✓ Антипаттернов не найдено в изменённых BSL-файлах</div>'; return; }
+  const rows = findings.map((f) => `
+    <div class="lint-row">
+      <div class="lint-top"><span class="lint-sev ${f.severity}">${f.severity}</span>
+        <span class="lint-loc">${esc(f.file)}:${f.line}</span></div>
+      <div class="lint-msg">${esc(f.message)}</div>
+      ${f.code ? `<div class="lint-code">${esc(f.code)}</div>` : ''}
+    </div>`).join('');
+  $('#changeDiff').innerHTML = `<div class="lint-list">${rows}</div>`;
+}
+
+// Модальный ввод текста (window.prompt в Electron отключён)
+function modalPrompt(title, fields) {
+  return new Promise((resolve) => {
+    $('#modalTitle').textContent = title;
+    $('#modalBody').innerHTML = fields.map((f) =>
+      `<div><label>${esc(f.label)}</label><input data-k="${f.key}" type="${f.type || 'text'}" value="${esc(f.value || '')}" /></div>`).join('');
+    $('#modal').classList.remove('hidden');
+    const first = $('#modalBody input'); if (first) first.focus();
+    const cleanup = () => { $('#modal').classList.add('hidden'); $('#modalOk').onclick = null; $('#modalCancel').onclick = null; };
+    $('#modalOk').onclick = () => { const r = {}; $$('#modalBody [data-k]').forEach((i) => r[i.dataset.k] = i.value); cleanup(); resolve(r); };
+    $('#modalCancel').onclick = () => { cleanup(); resolve(null); };
+  });
 }
 
 // ---------- 1С ----------
@@ -192,11 +270,17 @@ async function onecAction(op) {
   const python = settings.v8unpackPython || 'python';
   const req = { op, exe, base, ext, python };
 
-  const needBase = ['dumpConfigToFiles', 'loadConfigFromFiles', 'dumpCfg', 'loadCfg', 'updateDBCfg'];
+  const needBase = ['dumpConfigToFiles', 'loadConfigFromFiles', 'dumpCfg', 'loadCfg', 'updateDBCfg',
+    'startEnterprise', 'startDesigner', 'probeLock', 'dumpIB'];
   if (needBase.includes(op) && !base) { toastConsole('Сначала выберите базу (Настройки)', 'stderr'); return; }
 
   try {
-    if (op === 'dumpConfigToFiles' || op === 'loadConfigFromFiles') {
+    if (op === 'pushExtension') {
+      req.repo = currentRepoPath();
+      if (!req.repo) { toastConsole('Выберите репозиторий БУХ (со scripts/push-ext.ps1)', 'stderr'); return; }
+    } else if (op === 'dumpIB') {
+      const f = await api.dialog.saveFile({ filters: [{ name: 'Выгрузка ИБ', extensions: ['dt'] }] }); if (!f) return; req.file = f;
+    } else if (op === 'dumpConfigToFiles' || op === 'loadConfigFromFiles') {
       const dir = await api.dialog.pickDir(); if (!dir) return; req.dir = dir;
     } else if (op === 'dumpCfg') {
       const f = await api.dialog.saveFile({ filters: [{ name: '1С', extensions: ['cf', 'cfe'] }] }); if (!f) return; req.file = f;
@@ -300,8 +384,10 @@ async function run(fn, after) {
 function fileRowHTML(file, code, act) {
   const cls = code === '?' ? 'st-new' : `st ${code}`;
   const label = code === '?' ? 'A' : code;
-  const actBtn = act ? `<button class="file-act" title="${act === 'stage' ? 'В индекс' : 'Из индекса'}">${act === 'stage' ? '+' : '−'}</button>` : '';
-  return `<div class="file-row" data-file="${esc(file)}"><span class="${cls}">${label}</span><span class="file-path">${esc(file)}</span>${actBtn}</div>`;
+  let actBtn = '';
+  if (act === 'stage') actBtn = `<button class="file-act discard" title="Отменить изменения">⟲</button><button class="file-act" title="В индекс">+</button>`;
+  else if (act === 'unstage') actBtn = `<button class="file-act" title="Из индекса">−</button>`;
+  return `<div class="file-row" data-file="${esc(file)}" data-code="${esc(code)}"><span class="${cls}">${label}</span><span class="file-path">${esc(file)}</span>${actBtn}</div>`;
 }
 function colorizeDiff(text) {
   if (!text) return '<div class="empty">Нет изменений</div>';

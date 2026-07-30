@@ -41,6 +41,9 @@
         <div class="branch-box">
           <span class="branch-ic">⑂</span>
           <select id="branchSelect" title="Ветка"></select>
+          <button id="branchNew" class="mini" title="Новая ветка">+</button>
+          <button id="branchMerge" class="mini" title="Слить ветку">⤵</button>
+          <button id="branchDel" class="mini" title="Удалить ветку">🗑</button>
           <span id="syncBadge" class="sync"></span>
         </div>
         <div class="spacer"></div>
@@ -75,7 +78,10 @@
             <div class="pane list-pane">
               <div class="pane-head">
                 Рабочая копия <button id="refreshStatus" class="mini">⟳</button>
-                <button id="stageAll" class="mini right">+ Всё</button>
+                <button id="btnLint" class="mini right" title="Проверка BSL по антипаттернам">✓ BSL</button>
+                <button id="btnStash" class="mini" title="git stash">Stash</button>
+                <button id="btnStashPop" class="mini" title="git stash pop">Pop</button>
+                <button id="stageAll" class="mini">+ Всё</button>
               </div>
               <div class="group-label">Staged</div>
               <div id="stagedList" class="file-list"></div>
@@ -83,6 +89,7 @@
               <div id="unstagedList" class="file-list"></div>
               <div class="commit-box">
                 <textarea id="commitMsg" placeholder="Сообщение коммита…"></textarea>
+                <label class="amend-lbl"><input type="checkbox" id="amendChk" /> amend (изменить последний коммит)</label>
                 <button id="btnCommit" class="primary block">✓ Закоммитить</button>
               </div>
             </div>
@@ -130,6 +137,25 @@
               <button class="act" data-op="loadConfigFromFiles">Загрузить XML → БД…</button>
               <button class="act warn" data-op="updateDBCfg">Обновить конфигурацию БД (F7)</button>
             </div>
+
+            <div class="card highlight">
+              <div class="card-title">🚀 Выложить расширение</div>
+              <p class="card-desc">push-ext.ps1: бэкап → загрузка исходников → UpdateDBCfg</p>
+              <button class="act primary-act" data-op="pushExtension">Выложить в базу (1 клик)</button>
+            </div>
+            <div class="card">
+              <div class="card-title">База</div>
+              <p class="card-desc">Запуск и проверка блокировки</p>
+              <button class="act" data-op="startEnterprise">▶ Предприятие</button>
+              <button class="act" data-op="startDesigner">🛠 Конфигуратор</button>
+              <button class="act" data-op="probeLock">🔒 Проверить блокировку</button>
+            </div>
+            <div class="card">
+              <div class="card-title">Бэкап</div>
+              <p class="card-desc">Перед рискованной заливкой</p>
+              <button class="act" data-op="dumpCfg">Бэкап .cf/.cfe…</button>
+              <button class="act" data-op="dumpIB">Бэкап базы .dt…</button>
+            </div>
           </div>
         </div>
 
@@ -144,6 +170,14 @@
             <h3>Базы 1С</h3>
             <div id="baseRows"></div>
             <button id="addBase" class="mini">+ Добавить базу</button>
+          </div>
+          <div class="settings-block">
+            <h3>Клонировать репозиторий</h3>
+            <div class="field"><label>URL</label><input id="cloneUrl" type="text" placeholder="https://github.com/…/repo.git" /></div>
+            <div class="field"><label>Целевая папка</label>
+              <div style="display:flex;gap:8px"><input id="cloneDir" type="text" style="flex:1" placeholder="куда клонировать" /><button id="pickCloneDir" class="mini">📁</button></div>
+            </div>
+            <button id="btnClone" class="primary">Clone</button>
           </div>
           <div class="settings-block">
             <h3>Прочее</h3>
