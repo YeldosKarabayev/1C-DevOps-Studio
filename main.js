@@ -30,6 +30,14 @@ function createWindow() {
     },
   });
   win.loadFile(path.join(__dirname, 'renderer', 'index.html'));
+
+  // Диагностика: проброс консоли рендерера и ошибок preload в stdout
+  win.webContents.on('console-message', (_e, level, message, line, source) => {
+    console.log(`[renderer:${level}] ${message} (${source}:${line})`);
+  });
+  win.webContents.on('preload-error', (_e, p, err) => console.log('[preload-error]', p, err && err.stack || err));
+  win.webContents.on('render-process-gone', (_e, d) => console.log('[render-gone]', JSON.stringify(d)));
+  if (process.env.ONEC_DEVTOOLS) win.webContents.openDevTools({ mode: 'detach' });
 }
 
 app.whenReady().then(() => {

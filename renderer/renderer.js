@@ -1,4 +1,5 @@
 'use strict';
+(() => {
 const $ = (s) => document.querySelector(s);
 const $$ = (s) => Array.from(document.querySelectorAll(s));
 const api = window.api;
@@ -315,4 +316,11 @@ function colorizeDiff(text) {
 }
 function esc(s) { return String(s == null ? '' : s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])); }
 
-init();
+window.addEventListener('error', (e) => console.error('WINDOW ERROR:', e.message, 'at', e.filename + ':' + e.lineno));
+init().catch((err) => {
+  const msg = (err && err.stack) || String(err);
+  console.error('INIT FAILED:', msg);
+  document.body.insertAdjacentHTML('afterbegin',
+    `<pre style="position:fixed;top:0;left:0;right:0;z-index:999;background:#f85149;color:#fff;padding:10px;margin:0;white-space:pre-wrap">INIT ERROR: ${msg}</pre>`);
+});
+})();
