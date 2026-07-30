@@ -1,0 +1,21 @@
+{
+  "name": "onec-devops-studio",
+  "version": "0.1.0",
+  "description": "1С DevOps Studio — git-история, push/pull, сборка/разбор .cf/.cfe и заливка в конфигуратор",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "dist": "electron-builder --win"
+  },
+  "author": "YeldosKarabayev",
+  "license": "MIT",
+  "devDependencies": {
+    "electron": "^33.0.0"
+  },
+  "build": {
+    "appId": "kz.evrika.onec-devops-studio",
+    "productName": "1С DevOps Studio",
+    "files": ["main.js", "preload.js", "lib/**/*", "renderer/**/*"],
+    "win": { "target": "nsis" }
+  }
+}

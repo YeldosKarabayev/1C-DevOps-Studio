@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="ru" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self'" />
+  <title>1С DevOps Studio</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="app">
+    <!-- Sidebar -->
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="logo">1С</div>
+        <div class="brand-text">
+          <div class="brand-title">DevOps Studio</div>
+          <div class="brand-sub">git · сборка · конфигуратор</div>
+        </div>
+      </div>
+
+      <nav class="nav">
+        <button class="nav-item active" data-view="history"><span class="ic">◷</span> История</button>
+        <button class="nav-item" data-view="changes"><span class="ic">✎</span> Изменения <span id="changesBadge" class="badge hidden">0</span></button>
+        <button class="nav-item" data-view="onec"><span class="ic">⚙</span> Сборка 1С</button>
+        <button class="nav-item" data-view="settings"><span class="ic">⚙</span> Настройки</button>
+      </nav>
+
+      <div class="sidebar-foot">
+        <button id="themeToggle" class="ghost-btn" title="Тема">🌙 Тема</button>
+      </div>
+    </aside>
+
+    <!-- Main -->
+    <main class="main">
+      <!-- Topbar -->
+      <header class="topbar">
+        <div class="repo-picker">
+          <label>Репозиторий</label>
+          <select id="repoSelect"></select>
+        </div>
+        <div class="branch-box">
+          <span class="branch-ic">⑂</span>
+          <select id="branchSelect" title="Ветка"></select>
+          <span id="syncBadge" class="sync"></span>
+        </div>
+        <div class="spacer"></div>
+        <div class="git-actions">
+          <button id="btnFetch" class="tbtn" title="git fetch">⟳ Fetch</button>
+          <button id="btnPull" class="tbtn" title="git pull">↓ Pull</button>
+          <button id="btnPush" class="tbtn primary" title="git push">↑ Push</button>
+        </div>
+      </header>
+
+      <section class="content">
+        <!-- История -->
+        <div class="view" id="view-history">
+          <div class="split">
+            <div class="pane list-pane">
+              <div class="pane-head">Коммиты <button id="refreshLog" class="mini">⟳</button></div>
+              <div id="commitList" class="commit-list"></div>
+            </div>
+            <div class="pane detail-pane">
+              <div class="pane-head" id="commitHead">Выберите коммит</div>
+              <div class="detail-body">
+                <div id="commitFiles" class="file-list"></div>
+                <pre id="commitDiff" class="diff"></pre>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Изменения -->
+        <div class="view hidden" id="view-changes">
+          <div class="split">
+            <div class="pane list-pane">
+              <div class="pane-head">
+                Рабочая копия <button id="refreshStatus" class="mini">⟳</button>
+                <button id="stageAll" class="mini right">+ Всё</button>
+              </div>
+              <div class="group-label">Staged</div>
+              <div id="stagedList" class="file-list"></div>
+              <div class="group-label">Не в индексе</div>
+              <div id="unstagedList" class="file-list"></div>
+              <div class="commit-box">
+                <textarea id="commitMsg" placeholder="Сообщение коммита…"></textarea>
+                <button id="btnCommit" class="primary block">✓ Закоммитить</button>
+              </div>
+            </div>
+            <div class="pane detail-pane">
+              <div class="pane-head" id="changeHead">Diff</div>
+              <pre id="changeDiff" class="diff"></pre>
+            </div>
+          </div>
+        </div>
+
+        <!-- Сборка 1С -->
+        <div class="view hidden" id="view-onec">
+          <div class="onec-grid">
+            <div class="field">
+              <label>Платформа (1cv8.exe)</label>
+              <select id="platformSelect"></select>
+            </div>
+            <div class="field">
+              <label>База</label>
+              <select id="baseSelect"></select>
+            </div>
+            <div class="field">
+              <label>Расширение (имя, для .cfe) — пусто = основная конфа</label>
+              <input id="extName" type="text" placeholder="напр. ЭВР_Доработки" />
+            </div>
+          </div>
+
+          <div class="cards">
+            <div class="card">
+              <div class="card-title">Разобрать</div>
+              <p class="card-desc">Конфигурация БД → XML-исходники</p>
+              <button class="act" data-op="dumpConfigToFiles">Конфа БД → XML…</button>
+              <button class="act" data-op="v8extract">Распаковать .cf/.cfe/.epf…</button>
+            </div>
+            <div class="card">
+              <div class="card-title">Собрать</div>
+              <p class="card-desc">Исходники → бинарный файл</p>
+              <button class="act" data-op="dumpCfg">Выгрузить .cf/.cfe из БД…</button>
+              <button class="act" data-op="v8build">Собрать .cf/.cfe/.epf из папки…</button>
+            </div>
+            <div class="card">
+              <div class="card-title">Залить в Конфигуратор</div>
+              <p class="card-desc">Загрузка в базу + обновление</p>
+              <button class="act" data-op="loadCfg">Загрузить .cf/.cfe → БД…</button>
+              <button class="act" data-op="loadConfigFromFiles">Загрузить XML → БД…</button>
+              <button class="act warn" data-op="updateDBCfg">Обновить конфигурацию БД (F7)</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Настройки -->
+        <div class="view hidden" id="view-settings">
+          <div class="settings-block">
+            <h3>Репозитории</h3>
+            <div id="repoRows"></div>
+            <button id="addRepo" class="mini">+ Добавить репозиторий</button>
+          </div>
+          <div class="settings-block">
+            <h3>Базы 1С</h3>
+            <div id="baseRows"></div>
+            <button id="addBase" class="mini">+ Добавить базу</button>
+          </div>
+          <div class="settings-block">
+            <h3>Прочее</h3>
+            <div class="field">
+              <label>Python для v8unpack</label>
+              <input id="pyPath" type="text" />
+            </div>
+          </div>
+          <button id="saveSettings" class="primary">Сохранить настройки</button>
+          <span id="saveHint" class="hint"></span>
+        </div>
+      </section>
+
+      <!-- Console -->
+      <section class="console" id="console">
+        <div class="console-head">
+          <span id="consoleTitle">Консоль</span>
+          <span id="spinner" class="spinner hidden"></span>
+          <div class="spacer"></div>
+          <button id="clearConsole" class="mini">Очистить</button>
+          <button id="toggleConsole" class="mini">▾</button>
+        </div>
+        <pre id="consoleBody" class="console-body"></pre>
+      </section>
+    </main>
+  </div>
+
+  <!-- Modal for base editing -->
+  <div id="modal" class="modal hidden">
+    <div class="modal-card">
+      <div class="modal-head" id="modalTitle">Диалог</div>
+      <div class="modal-body" id="modalBody"></div>
+      <div class="modal-foot">
+        <button id="modalCancel" class="ghost-btn">Отмена</button>
+        <button id="modalOk" class="primary">OK</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="renderer.js"></script>
+</body>
+</html>
