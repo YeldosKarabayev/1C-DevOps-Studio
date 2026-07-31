@@ -9,6 +9,7 @@ let repo = null;          // текущий путь репозитория
 let selCommit = null;
 let selChangeFile = null;
 let consoleHeight = 200, consoleCollapsed = false;
+let _curLine = null;
 const _resizers = [];
 
 // ---------- init ----------
@@ -563,7 +564,7 @@ function collectSettings() {
 // ---------- Console / process ----------
 let running = false;
 function wireConsole() {
-  $('#clearConsole').onclick = () => { $('#consoleBody').innerHTML = ''; };
+  $('#clearConsole').onclick = () => { $('#consoleBody').innerHTML = ''; _curLine = null; };
   $('#toggleConsole').onclick = () => {
     const c = $('#console'); consoleCollapsed = !consoleCollapsed;
     c.style.height = consoleCollapsed ? '41px' : consoleHeight + 'px';
@@ -577,10 +578,18 @@ function wireConsole() {
 }
 function setSpinner(on) { running = on; $('#spinner').classList.toggle('hidden', !on); $$('.git-actions .tbtn').forEach((b) => b.disabled = on); }
 function appendConsole(text, stream) {
-  const span = document.createElement('span');
-  span.className = stream === 'cmd' ? 'c-cmd' : stream === 'stderr' ? 'c-err' : (stream === 'ok' ? 'c-ok' : '');
-  span.textContent = text;
-  const body = $('#consoleBody'); body.appendChild(span); body.scrollTop = body.scrollHeight;
+  const cls = stream === 'cmd' ? 'c-cmd' : stream === 'stderr' ? 'c-err' : (stream === 'ok' ? 'c-ok' : '');
+  const body = $('#consoleBody');
+  // мини-терминал: \n — новая строка, \r — перезатереть текущую (для прогресс-баров tqdm)
+  for (const p of text.split(/(\r\n|\n|\r)/)) {
+    if (p === '') continue;
+    if (p === '\n' || p === '\r\n') { body.appendChild(document.createTextNode('\n')); _curLine = null; continue; }
+    if (p === '\r') { if (_curLine) _curLine.textContent = ''; continue; }
+    if (!_curLine) { _curLine = document.createElement('span'); body.appendChild(_curLine); }
+    _curLine.className = cls;
+    _curLine.textContent += p;
+  }
+  body.scrollTop = body.scrollHeight;
 }
 function toastConsole(msg, stream) { appendConsole(`\n${msg}\n`, stream || 'stdout'); }
 async function run(fn, after) {
