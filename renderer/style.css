@@ -67,7 +67,7 @@ button, select, input, textarea { font-family: inherit; font-size: 14px; color: 
 .spacer { flex: 1; }
 ::selection { background: var(--accent-bar); color: var(--canvas); }
 
-.app { display: grid; grid-template-columns: 248px 1fr; height: 100vh; }
+.app { display: grid; grid-template-columns: 248px 1fr; grid-template-rows: 100vh; height: 100vh; overflow: hidden; }
 
 /* ---------- Sidebar ---------- */
 .sidebar {
@@ -105,7 +105,8 @@ button, select, input, textarea { font-family: inherit; font-size: 14px; color: 
 .ghost-btn:hover { color: var(--fg); background: var(--canvas-hover); }
 
 /* ---------- Main ---------- */
-.main { display: flex; flex-direction: column; min-width: 0; }
+.main { display: flex; flex-direction: column; min-width: 0; min-height: 0; overflow: hidden; }
+.sidebar { overflow: hidden; }
 .topbar {
   display: flex; align-items: center; gap: 14px; padding: 12px 16px;
   border-bottom: 1px solid var(--border); background: var(--canvas);
@@ -133,8 +134,8 @@ select:focus, input:focus, textarea:focus { border-color: var(--fg-muted); box-s
 .tbtn.primary:hover { background: var(--emphasis-hover); }
 .tbtn:disabled { opacity: .5; cursor: not-allowed; }
 
-.content { flex: 1; min-height: 0; overflow: hidden; }
-.view { height: 100%; }
+.content { flex: 1; min-height: 0; overflow: hidden; display: flex; flex-direction: column; }
+.view { flex: 1; min-height: 0; }
 .split { display: grid; grid-template-columns: 360px 1fr; height: 100%; }
 .pane { display: flex; flex-direction: column; min-height: 0; border-right: 1px solid var(--border); }
 .detail-pane { border-right: none; background: var(--canvas); }
