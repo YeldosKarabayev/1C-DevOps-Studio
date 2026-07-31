@@ -27,6 +27,8 @@ async function init() {
   wireOnec();
   wireSettings();
   wireExtra();
+  wireDeploy();
+  fillDeploySelects();
   setupResizers();
   repo = currentRepoPath();
   await refreshRepo();
@@ -143,6 +145,7 @@ function wireNav() {
     if (view === 'history') loadLog();
     if (view === 'changes') loadStatus();
     if (view === 'settings') renderSettings();
+    if (view === 'deploy') fillDeploySelects();
   }));
   $('#refreshLog').onclick = loadLog;
   $('#refreshStatus').onclick = loadStatus;
@@ -479,6 +482,55 @@ async function onecAction(op) {
     }
     await run(() => api.onec.exec(req), null);
   } catch (e) { toastConsole(String(e), 'stderr'); }
+}
+
+// ---------- Деплой (CD-конвейер) ----------
+function fillDeploySelects() {
+  const dr = $('#depRepo'); if (dr) dr.innerHTML = settings.repos.map((r, i) => `<option value="${i}">${esc(r.name)}</option>`).join('') || '<option value="">— нет репозиториев —</option>';
+  const db = $('#depBase'); if (db) db.innerHTML = (settings.bases || []).map((b, i) => `<option value="${i}">${esc(b.name)} — ${esc(baseLoc(b))}</option>`).join('') || '<option value="">— базы не заданы —</option>';
+}
+function wireDeploy() {
+  $('#depPickXml').onclick = async () => { const d = await api.dialog.pickDir(); if (d) $('#depXmlDir').value = d; };
+  $('#btnDeploy').onclick = runDeploy;
+}
+function plLabel(s) { return s === 'running' ? 'выполняется…' : s === 'ok' ? '✓ готово' : s === 'fail' ? '✖ ошибка' : 'ожидание'; }
+function renderPipeline(stages) {
+  $('#pipeline').innerHTML = stages.map((s, i) =>
+    `<div class="pl-row ${s.status || 'pending'}"><span class="pl-dot"></span><span class="pl-title">${i + 1}. ${esc(s.title)}</span><span class="pl-status">${plLabel(s.status)}</span></div>`).join('');
+}
+async function runDeploy() {
+  if (running) { toastConsole('Дождитесь завершения текущей операции', 'stderr'); return; }
+  const exe = settings.activePlatform || (settings.platforms && settings.platforms[0]) || '';
+  const repo = settings.repos[$('#depRepo').value];
+  const base = settings.bases[$('#depBase').value];
+  const xmlDir = $('#depXmlDir').value.trim();
+  const ext = $('#depExt').value.trim();
+  if (!base) { toastConsole('Выберите целевую базу', 'stderr'); return; }
+  if (!xmlDir) { toastConsole('Укажите папку XML-исходников', 'stderr'); return; }
+  if (!confirm(`Деплой изменит целевую базу «${base.name}» (${baseLoc(base)}).\nИсточник: ${xmlDir}\n\nПродолжить?`)) return;
+
+  const stages = [];
+  if ($('#optPull').checked && repo) stages.push({ title: 'git pull', fn: () => api.git.pull(repo.path) });
+  if ($('#optLint').checked && repo) stages.push({ title: 'BSL-линтинг изменений', fn: async () => { const res = await api.bsl.lint(repo.path); const crit = (res.findings || []).filter((f) => f.severity === 'critical').length; appendConsole(`BSL: находок ${res.findings.length}, критичных ${crit}\n`, crit ? 'stderr' : 'ok'); return { code: crit > 0 ? 1 : 0 }; } });
+  if ($('#optBackup').checked) stages.push({ title: 'Бэкап целевой базы', fn: () => { const dir = (settings.backupDir || '').replace(/[\\/]+$/, ''); const file = dir + '\\' + sanitizeName(base.name) + '_' + (ext ? sanitizeName(ext) : 'config') + '_predeploy_' + nowStamp() + (ext ? '.cfe' : '.cf'); return api.onec.exec({ op: 'dumpCfg', exe, base, ext, file }); } });
+  if ($('#optLock').checked) stages.push({ title: 'Проверка блокировки', fn: () => api.onec.exec({ op: 'probeLock', exe, base }) });
+  if ($('#optValidate').checked) stages.push({ title: 'Валидация (CheckConfig)', fn: () => api.onec.exec({ op: 'validateXml', exe, base, ext, dir: xmlDir }) });
+  stages.push({ title: 'Загрузка XML → база', fn: () => api.onec.exec({ op: 'loadConfigFromFiles', exe, base, ext, dir: xmlDir }) });
+  stages.push({ title: 'Обновление конфигурации БД (UpdateDBCfg)', fn: () => api.onec.exec({ op: 'updateDBCfg', exe, base, ext }) });
+
+  renderPipeline(stages);
+  setSpinner(true); $('#btnDeploy').disabled = true;
+  appendConsole(`\n═══ ДЕПЛОЙ в «${base.name}» ═══\n`, 'cmd');
+  let failed = false;
+  for (const s of stages) {
+    s.status = 'running'; renderPipeline(stages);
+    appendConsole(`\n━━ ${s.title}\n`, 'cmd');
+    let r; try { r = await s.fn(); } catch (e) { r = { code: -1 }; appendConsole(String(e && e.message || e) + '\n', 'stderr'); }
+    if (!r || r.code !== 0) { s.status = 'fail'; renderPipeline(stages); appendConsole(`✖ Этап «${s.title}» не пройден (код ${r ? r.code : '?'}). Деплой остановлен.\n`, 'stderr'); failed = true; break; }
+    s.status = 'ok'; renderPipeline(stages);
+  }
+  setSpinner(false); $('#btnDeploy').disabled = false;
+  appendConsole(failed ? '\n✖ Деплой прерван.\n' : '\n✅ Деплой завершён успешно.\n', failed ? 'stderr' : 'ok');
 }
 
 // ---------- Settings ----------

@@ -37,6 +37,9 @@
         <button class="nav-item" data-view="onec">
           <svg class="ic" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M8 1.6l5.6 3.2v6.4L8 14.4 2.4 11.2V4.8z" stroke-linejoin="round"/><path d="M2.6 4.9L8 8.05l5.4-3.15M8 8.05V14.3" stroke-linejoin="round"/></svg>
           <span>Сборка 1С</span></button>
+        <button class="nav-item" data-view="deploy">
+          <svg class="ic" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M8 10.5V2.6M8 2.6L5.2 5.4M8 2.6l2.8 2.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M2.9 9.4v3.4h10.2V9.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          <span>Деплой</span></button>
         <button class="nav-item" data-view="settings">
           <svg class="ic" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><circle cx="8" cy="8" r="2.1"/><path d="M8 1.6v2.1M8 12.3v2.1M14.4 8h-2.1M3.7 8H1.6M12.53 3.47l-1.48 1.48M4.95 11.05l-1.48 1.48M12.53 12.53l-1.48-1.48M4.95 4.95L3.47 3.47" stroke-linecap="round"/></svg>
           <span>Настройки</span></button>
@@ -187,6 +190,40 @@
                 <button class="op-row" data-op="dumpIB"><span class="op-ic">💾</span><span class="op-txt"><span class="op-t">Полная выгрузка базы → .dt</span><span class="op-d">снимок всей информационной базы</span></span></button>
               </div>
             </div>
+          </div>
+        </div>
+
+        <!-- Деплой (CD) -->
+        <div class="view hidden" id="view-deploy">
+          <div class="onec-page">
+            <div class="page-head">
+              <h2>Деплой</h2>
+              <p>Конвейер доставки в базу: pull → бэкап → проверка блокировки → валидация → загрузка исходников + обновление конфигурации. Запуск по кнопке.</p>
+            </div>
+
+            <div class="op-panel">
+              <div class="conn-grid dep-grid">
+                <div class="field"><label>Источник (репозиторий)</label><select id="depRepo"></select></div>
+                <div class="field"><label>Целевая база</label><select id="depBase"></select></div>
+                <div class="field wide"><label>Папка XML-исходников</label>
+                  <div style="display:flex;gap:8px"><input id="depXmlDir" style="flex:1" placeholder="папка с Configuration.xml" /><button id="depPickXml" class="mini">📁</button></div></div>
+                <div class="field wide"><label>Расширение <span class="lbl-dim">(пусто = основная конфигурация)</span></label><input id="depExt" placeholder="напр. ЭВР_Доработки" /></div>
+              </div>
+              <div class="dep-opts">
+                <label class="opt"><span>git pull перед деплоем</span><input type="checkbox" id="optPull" checked /></label>
+                <label class="opt"><span>бэкап целевой базы</span><input type="checkbox" id="optBackup" checked /></label>
+                <label class="opt"><span>проверка блокировки</span><input type="checkbox" id="optLock" checked /></label>
+                <label class="opt"><span>валидация (CheckConfig)</span><input type="checkbox" id="optValidate" checked /></label>
+                <label class="opt"><span>BSL-линтинг изменений</span><input type="checkbox" id="optLint" /></label>
+              </div>
+            </div>
+
+            <div class="op-section">
+              <div class="op-section-title">Конвейер</div>
+              <div id="pipeline" class="pipeline"><div class="empty">Нажмите «Запустить деплой» — этапы появятся здесь</div></div>
+            </div>
+
+            <button id="btnDeploy" class="btn-primary btn-deploy">🚀 Запустить деплой</button>
           </div>
         </div>
 
