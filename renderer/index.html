@@ -124,67 +124,68 @@
 
         <!-- Сборка 1С -->
         <div class="view hidden" id="view-onec">
-          <div class="page-head">
-            <h2>Сборка и заливка 1С</h2>
-            <p>Разбор/сборка конфигурации и расширений, заливка в Конфигуратор, запуск базы. Все операции — в консоли снизу.</p>
-          </div>
-          <div class="onec-grid">
-            <div class="field">
-              <label>Платформа (1cv8.exe)</label>
-              <select id="platformSelect"></select>
-            </div>
-            <div class="field">
-              <label>База</label>
-              <select id="baseSelect"></select>
-            </div>
-            <div class="field">
-              <label>Расширение (имя, для .cfe) — пусто = основная конфа</label>
-              <input id="extName" type="text" placeholder="напр. ЭВР_Доработки" />
-            </div>
-          </div>
-
-          <div class="cards">
-            <div class="card">
-              <div class="card-title">Разобрать в исходники</div>
-              <p class="card-desc">XML-метаданные + модули .bsl — для VS Code / Cursor / EDT и git</p>
-              <button class="act primary-act" data-op="dumpXmlMain">📄 Основная конфигурация → XML…</button>
-              <button class="act" data-op="dumpXmlExt">🧩 Расширение → XML…</button>
-              <button class="act" data-op="v8extract">Распаковать .cf/.cfe/.epf (v8unpack)…</button>
-            </div>
-            <div class="card">
-              <div class="card-title">Собрать в .cf</div>
-              <p class="card-desc">Исходники → бинарный файл</p>
-              <button class="act primary-act" data-op="buildCfFromXml">🔨 Из XML (DumpConfigToFiles) → .cf…</button>
-              <button class="act" data-op="dumpCfg">Выгрузить .cf/.cfe из живой БД…</button>
-              <button class="act" data-op="v8build">Из v8unpack-исходников → .cf/.cfe/.epf…</button>
-            </div>
-            <div class="card">
-              <div class="card-title">Залить в Конфигуратор</div>
-              <p class="card-desc">Загрузка в базу + обновление</p>
-              <button class="act" data-op="loadCfg">Загрузить .cf/.cfe → БД…</button>
-              <button class="act" data-op="loadConfigFromFiles">Загрузить XML → БД…</button>
-              <button class="act warn" data-op="updateDBCfg">Обновить конфигурацию БД (F7)</button>
+          <div class="onec-page">
+            <div class="page-head">
+              <h2>Сборка 1С</h2>
+              <p>Разбор и сборка конфигурации, заливка в Конфигуратор, бэкапы и запуск базы. Прогресс и вывод — в консоли снизу.</p>
             </div>
 
-            <div class="card highlight">
-              <div class="card-title">🚀 Выложить расширение</div>
-              <p class="card-desc">push-ext.ps1: бэкап → загрузка исходников → UpdateDBCfg</p>
-              <button class="act primary-act" data-op="pushExtension">Выложить в базу (1 клик)</button>
+            <div class="op-panel">
+              <div class="conn-grid">
+                <div class="field"><label>Платформа</label><select id="platformSelect"></select></div>
+                <div class="field"><label>База</label><select id="baseSelect"></select></div>
+                <div class="field"><label>Расширение <span class="lbl-dim">(пусто = основная)</span></label><input id="extName" type="text" placeholder="напр. ЭВР_Доработки" /></div>
+              </div>
+              <div class="conn-actions">
+                <button class="chip" data-op="probeLock">🔒 Проверить блокировку</button>
+                <button class="chip" data-op="startEnterprise">▶ Предприятие</button>
+                <button class="chip" data-op="startDesigner">🛠 Конфигуратор</button>
+              </div>
             </div>
-            <div class="card">
-              <div class="card-title">База</div>
-              <p class="card-desc">Запуск и проверка блокировки</p>
-              <button class="act" data-op="startEnterprise">▶ Предприятие</button>
-              <button class="act" data-op="startDesigner">🛠 Конфигуратор</button>
-              <button class="act" data-op="probeLock">🔒 Проверить блокировку</button>
+
+            <div class="callout">
+              <span class="callout-ic">🚀</span>
+              <div class="callout-body">
+                <div class="callout-title">Выложить расширение в базу</div>
+                <div class="callout-sub">push-ext.ps1: бэкап → загрузка исходников → UpdateDBCfg</div>
+              </div>
+              <button class="btn-primary" data-op="pushExtension">Выложить</button>
             </div>
-            <div class="card">
-              <div class="card-title">Бэкап</div>
-              <p class="card-desc">В папку бэкапов, авто-имя с датой</p>
-              <button class="act primary-act" data-op="autoBackup">🗄 Основная конфигурация (1 клик)</button>
-              <button class="act" data-op="autoBackupExt">🧩 Расширение (из поля «Расширение»)</button>
-              <button class="act" data-op="dumpCfg">Указать путь вручную…</button>
-              <button class="act" data-op="dumpIB">Бэкап базы .dt…</button>
+
+            <div class="op-section">
+              <div class="op-section-title">Разобрать в исходники</div>
+              <div class="op-list">
+                <button class="op-row" data-op="dumpXmlMain"><span class="op-ic">📄</span><span class="op-txt"><span class="op-t">Основная конфигурация → XML</span><span class="op-d">XML + .bsl для VS Code / Cursor / EDT и git</span></span></button>
+                <button class="op-row" data-op="dumpXmlExt"><span class="op-ic">🧩</span><span class="op-txt"><span class="op-t">Расширение → XML</span><span class="op-d">исходники расширения из поля «Расширение»</span></span></button>
+                <button class="op-row" data-op="v8extract"><span class="op-ic">📦</span><span class="op-txt"><span class="op-t">Распаковать .cf / .cfe / .epf</span><span class="op-d">через v8unpack, без платформы (JSON + BSL)</span></span></button>
+              </div>
+            </div>
+
+            <div class="op-section">
+              <div class="op-section-title">Собрать бинарник</div>
+              <div class="op-list">
+                <button class="op-row" data-op="buildCfFromXml"><span class="op-ic">🔨</span><span class="op-txt"><span class="op-t">Из XML → .cf</span><span class="op-d">DumpConfigToFiles → через временную базу</span></span></button>
+                <button class="op-row" data-op="dumpCfg"><span class="op-ic">⬇️</span><span class="op-txt"><span class="op-t">Выгрузить .cf / .cfe из живой БД</span><span class="op-d">прямой DumpCfg из подключённой базы</span></span></button>
+                <button class="op-row" data-op="v8build"><span class="op-ic">📦</span><span class="op-txt"><span class="op-t">Собрать из v8unpack-исходников</span><span class="op-d">только для распакованного v8unpack</span></span></button>
+              </div>
+            </div>
+
+            <div class="op-section">
+              <div class="op-section-title">Залить в Конфигуратор</div>
+              <div class="op-list">
+                <button class="op-row" data-op="loadCfg"><span class="op-ic">⬆️</span><span class="op-txt"><span class="op-t">Загрузить .cf / .cfe → БД</span><span class="op-d">+ поле «Расширение» для .cfe</span></span></button>
+                <button class="op-row" data-op="loadConfigFromFiles"><span class="op-ic">📥</span><span class="op-txt"><span class="op-t">Загрузить XML → БД</span><span class="op-d">исходники из VS Code обратно в базу</span></span></button>
+                <button class="op-row danger" data-op="updateDBCfg"><span class="op-ic">⚙️</span><span class="op-txt"><span class="op-t">Обновить конфигурацию БД (F7)</span><span class="op-d">применить изменения — нужен монопольный режим</span></span></button>
+              </div>
+            </div>
+
+            <div class="op-section">
+              <div class="op-section-title">Бэкап</div>
+              <div class="op-list">
+                <button class="op-row" data-op="autoBackup"><span class="op-ic">🗄️</span><span class="op-txt"><span class="op-t">Основная конфигурация → .cf</span><span class="op-d">в папку бэкапов, авто-имя с датой</span></span></button>
+                <button class="op-row" data-op="autoBackupExt"><span class="op-ic">🧩</span><span class="op-txt"><span class="op-t">Расширение → .cfe</span><span class="op-d">из поля «Расширение», авто-имя</span></span></button>
+                <button class="op-row" data-op="dumpIB"><span class="op-ic">💾</span><span class="op-txt"><span class="op-t">Полная выгрузка базы → .dt</span><span class="op-d">снимок всей информационной базы</span></span></button>
+              </div>
             </div>
           </div>
         </div>

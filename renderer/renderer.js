@@ -420,7 +420,7 @@ function modalPrompt(title, fields) {
 // ---------- 1С ----------
 function wireOnec() {
   $('#platformSelect').onchange = () => { settings.activePlatform = $('#platformSelect').value; api.settings.save(settings); };
-  $$('.act').forEach((btn) => btn.onclick = () => onecAction(btn.dataset.op));
+  $$('#view-onec [data-op]').forEach((btn) => btn.onclick = () => onecAction(btn.dataset.op));
 }
 async function onecAction(op) {
   const exe = $('#platformSelect').value;
