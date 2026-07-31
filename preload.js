@@ -14,6 +14,9 @@ contextBridge.exposeInMainWorld('api', {
   git: {
     info: (repo) => ipcRenderer.invoke('git:info', repo),
     log: (repo) => ipcRenderer.invoke('git:log', repo),
+    logGraph: (repo) => ipcRenderer.invoke('git:logGraph', repo),
+    commitStat: (repo, hash) => ipcRenderer.invoke('git:commitStat', { repo, hash }),
+    changeStats: (repo) => ipcRenderer.invoke('git:changeStats', repo),
     status: (repo) => ipcRenderer.invoke('git:status', repo),
     diffFile: (repo, file, staged) => ipcRenderer.invoke('git:diffFile', { repo, file, staged }),
     commitFiles: (repo, hash) => ipcRenderer.invoke('git:commitFiles', { repo, hash }),

@@ -104,35 +104,112 @@ async function refreshRepo() {
 }
 
 // ---------- History ----------
+const ROW_H = 56, LANE_W = 16, GPAD = 10;
 async function loadLog() {
   if (!repo) return;
   const list = $('#commitList');
   list.innerHTML = '<div class="empty">Загрузка…</div>';
-  const res = await api.git.log(repo);
+  $('#graphSvg').innerHTML = '';
+  const res = await api.git.logGraph(repo);
   if (res.error) { list.innerHTML = `<div class="empty">${esc(res.error)}</div>`; return; }
-  if (!res.commits.length) { list.innerHTML = '<div class="empty">Нет коммитов</div>'; return; }
-  list.innerHTML = res.commits.map((c) => `
-    <div class="commit-row" data-hash="${c.hash}">
-      <div class="commit-subject">${esc(c.subject)}</div>
-      <div class="commit-meta"><span class="commit-hash">${c.short}</span><span>${esc(c.author)}</span><span>${esc(c.rel)}</span></div>
-    </div>`).join('');
+  const commits = res.commits || [];
+  $('#commitCount').textContent = commits.length;
+  if (!commits.length) { list.innerHTML = '<div class="empty">Нет коммитов</div>'; return; }
+  const { colOf, maxCol } = buildLanes(commits);
+  const graphW = (maxCol + 1) * LANE_W + GPAD;
+  renderGraphSvg(commits, colOf, maxCol, graphW);
+  list.style.paddingLeft = graphW + 'px';
+  list.innerHTML = commits.map((c) => commitRowHTML(c)).join('');
   list.querySelectorAll('.commit-row').forEach((row) => row.onclick = () => selectCommit(row));
 }
+
+// назначение колонок (lanes) для графа
+function buildLanes(commits) {
+  const colOf = {};
+  const lanes = []; // хэши, ожидаемые в каждой колонке
+  for (const c of commits) {
+    let col = lanes.indexOf(c.hash);
+    if (col === -1) { col = lanes.indexOf(null); if (col === -1) { col = lanes.length; lanes.push(c.hash); } else lanes[col] = c.hash; }
+    colOf[c.hash] = col;
+    // сходящиеся ветки: обнуляем прочие колонки, ждавшие этот же коммит
+    for (let j = 0; j < lanes.length; j++) if (j !== col && lanes[j] === c.hash) lanes[j] = null;
+    const ps = c.parents || [];
+    if (ps.length === 0) { lanes[col] = null; }
+    else {
+      lanes[col] = ps[0];
+      for (let k = 1; k < ps.length; k++) {
+        if (lanes.indexOf(ps[k]) === -1) { const free = lanes.indexOf(null); if (free === -1) lanes.push(ps[k]); else lanes[free] = ps[k]; }
+      }
+    }
+    while (lanes.length && lanes[lanes.length - 1] === null) lanes.pop();
+  }
+  const maxCol = Math.max(0, ...commits.map((c) => colOf[c.hash]));
+  return { colOf, maxCol };
+}
+
+function renderGraphSvg(commits, colOf, maxCol, graphW) {
+  const idx = {}; commits.forEach((c, i) => idx[c.hash] = i);
+  const H = commits.length * ROW_H;
+  const cx = (col) => GPAD / 2 + LANE_W / 2 + col * LANE_W;
+  const cy = (i) => i * ROW_H + ROW_H / 2;
+  const shades = [0.85, 0.5, 0.7, 0.4, 0.8, 0.55, 0.65];
+  const links = [], nodes = [];
+  commits.forEach((c, i) => {
+    const x = cx(colOf[c.hash]), y = cy(i);
+    const op = shades[colOf[c.hash] % shades.length];
+    (c.parents || []).forEach((p) => {
+      const pi = idx[p];
+      if (pi == null) { links.push(`<path class="glink" d="M${x},${y} L${x},${y + ROW_H / 2}" stroke-opacity="${op}"/>`); return; }
+      const px = cx(colOf[p]), py = cy(pi), m = (y + py) / 2;
+      const d = px === x ? `M${x},${y} L${px},${py}` : `M${x},${y} C${x},${m} ${px},${m} ${px},${py}`;
+      links.push(`<path class="glink" d="${d}" stroke-opacity="${op}"/>`);
+    });
+  });
+  commits.forEach((c, i) => nodes.push(`<circle class="gnode" data-hash="${c.hash}" cx="${cx(colOf[c.hash])}" cy="${cy(i)}" r="4.5"/>`));
+  const svg = $('#graphSvg');
+  svg.setAttribute('width', graphW); svg.setAttribute('height', H);
+  svg.setAttribute('viewBox', `0 0 ${graphW} ${H}`);
+  svg.innerHTML = links.join('') + nodes.join('');
+}
+
+function commitRowHTML(c) {
+  const refs = (c.refs || []).map((r) => {
+    const isHead = /HEAD/.test(r), isTag = /^tag:/.test(r);
+    return `<span class="ref ${isHead ? 'ref-head' : isTag ? 'ref-tag' : 'ref-branch'}">${esc(r.replace(/^tag:\s*/, ''))}</span>`;
+  }).join('');
+  return `<div class="commit-row" data-hash="${c.hash}">
+    <div class="commit-subject">${esc(c.subject)} ${refs}</div>
+    <div class="commit-meta"><span class="commit-hash">${c.short}</span><span>${esc(c.author)}</span><span>·</span><span>${esc(c.rel)}</span></div>
+  </div>`;
+}
+
 async function selectCommit(row) {
   $$('.commit-row').forEach((r) => r.classList.remove('sel'));
   row.classList.add('sel');
   selCommit = row.dataset.hash;
-  $('#commitHead').textContent = row.querySelector('.commit-subject').textContent;
-  const files = await api.git.commitFiles(repo, selCommit);
+  $$('#graphSvg .gnode').forEach((n) => n.classList.toggle('sel', n.dataset.hash === selCommit));
+  const d = await api.git.commitStat(repo, selCommit);
+  const parents = (d.parents || []).map((p) => `<span class="commit-hash">${esc(p.slice(0, 7))}</span>`).join(' ');
+  $('#commitDetail').innerHTML = `
+    <div class="cd-msg">${esc(d.body).replace(/\n/g, '<br>')}</div>
+    <div class="cd-meta">
+      <span class="cd-author">${esc(d.author)}</span>
+      <span class="cd-mut">&lt;${esc(d.email)}&gt;</span><span class="cd-mut">${esc(d.date)}</span>
+      <span class="commit-hash">${esc(d.short)}</span>
+      ${parents ? `<span class="cd-mut">↖</span>${parents}` : ''}
+    </div>`;
+  const files = d.files || [];
+  $('#commitFilesCount').textContent = files.length;
   const fl = $('#commitFiles');
-  fl.className = 'file-list small';
-  fl.innerHTML = files.map((f) => fileRowHTML(f.file, f.code)).join('') || '<div class="empty">Нет файлов</div>';
-  $('#commitDiff').innerHTML = '';
+  fl.innerHTML = files.map((f) =>
+    `<div class="file-row" data-file="${esc(f.file)}"><span class="st ${esc(f.status)}">${esc(f.status)}</span><span class="file-path">${esc(f.file)}</span><span class="stat"><span class="add">+${f.add}</span><span class="del">−${f.del}</span></span></div>`
+  ).join('') || '<div class="empty">Нет файлов</div>';
+  $('#commitDiff').innerHTML = '<div class="empty">Выберите файл</div>';
   fl.querySelectorAll('.file-row').forEach((r) => r.onclick = async () => {
     fl.querySelectorAll('.file-row').forEach((x) => x.classList.remove('sel'));
     r.classList.add('sel');
     const diff = await api.git.commitDiff(repo, selCommit, r.dataset.file);
-    $('#commitDiff').innerHTML = colorizeDiff(diff);
+    $('#commitDiff').innerHTML = renderDiff(diff);
   });
 }
 
@@ -144,8 +221,10 @@ async function loadStatus(badgeOnly) {
   const badge = $('#changesBadge');
   badge.textContent = total; badge.classList.toggle('hidden', total === 0);
   if (badgeOnly) return;
-  $('#stagedList').innerHTML = st.staged.map((f) => fileRowHTML(f.file, f.code, 'unstage')).join('') || '<div class="empty">Пусто</div>';
-  $('#unstagedList').innerHTML = st.unstaged.map((f) => fileRowHTML(f.file, f.code, 'stage')).join('') || '<div class="empty">Пусто</div>';
+  $('#commitBranch').textContent = $('#branchSelect').value || '—';
+  const stats = await api.git.changeStats(repo).catch(() => ({ staged: {}, unstaged: {} }));
+  $('#stagedList').innerHTML = st.staged.map((f) => fileRowHTML(f.file, f.code, 'unstage', stats.staged[f.file])).join('') || '<div class="empty">Пусто</div>';
+  $('#unstagedList').innerHTML = st.unstaged.map((f) => fileRowHTML(f.file, f.code, 'stage', stats.unstaged[f.file])).join('') || '<div class="empty">Пусто</div>';
   bindChangeRows('#stagedList', true);
   bindChangeRows('#unstagedList', false);
 }
@@ -158,7 +237,7 @@ function bindChangeRows(sel, staged) {
       selChangeFile = r.dataset.file;
       $('#changeHead').textContent = r.dataset.file;
       const diff = await api.git.diffFile(repo, r.dataset.file, staged);
-      $('#changeDiff').innerHTML = colorizeDiff(diff);
+      $('#changeDiff').innerHTML = renderDiff(diff);
     };
     const discardBtn = r.querySelector('.file-act.discard');
     if (discardBtn) discardBtn.onclick = async (e) => {
@@ -183,11 +262,13 @@ function wireGitActions() {
   $('#btnPush').onclick = () => run(() => api.git.push(repo), refreshRepo);
   $('#stageAll').onclick = async () => { await api.git.stageAll(repo); loadStatus(); };
   $('#btnCommit').onclick = async () => {
-    const msg = $('#commitMsg').value.trim();
-    if (!msg) { toastConsole('Введите сообщение коммита', 'stderr'); return; }
+    const sum = $('#commitSummary').value.trim();
+    const desc = $('#commitMsg').value.trim();
+    if (!sum) { toastConsole('Введите summary коммита', 'stderr'); return; }
+    const msg = desc ? `${sum}\n\n${desc}` : sum;
     const amend = $('#amendChk').checked;
     const fn = amend ? () => api.git.amend(repo, msg) : () => api.git.commit(repo, msg);
-    await run(fn, () => { $('#commitMsg').value = ''; $('#amendChk').checked = false; loadStatus(); loadLog(); refreshRepo(); });
+    await run(fn, () => { $('#commitSummary').value = ''; $('#commitMsg').value = ''; $('#amendChk').checked = false; loadStatus(); loadLog(); refreshRepo(); });
   };
 }
 
@@ -381,24 +462,34 @@ async function run(fn, after) {
 }
 
 // ---------- helpers ----------
-function fileRowHTML(file, code, act) {
+function fileRowHTML(file, code, act, stat) {
   const cls = code === '?' ? 'st-new' : `st ${code}`;
   const label = code === '?' ? 'A' : code;
   let actBtn = '';
   if (act === 'stage') actBtn = `<button class="file-act discard" title="Отменить изменения">⟲</button><button class="file-act" title="В индекс">+</button>`;
   else if (act === 'unstage') actBtn = `<button class="file-act" title="Из индекса">−</button>`;
-  return `<div class="file-row" data-file="${esc(file)}" data-code="${esc(code)}"><span class="${cls}">${label}</span><span class="file-path">${esc(file)}</span>${actBtn}</div>`;
+  const statHtml = stat ? `<span class="stat"><span class="add">+${stat.add || 0}</span><span class="del">−${stat.del || 0}</span></span>` : '';
+  return `<div class="file-row" data-file="${esc(file)}" data-code="${esc(code)}"><span class="${cls}">${label}</span><span class="file-path">${esc(file)}</span>${statHtml}${actBtn}</div>`;
 }
-function colorizeDiff(text) {
-  if (!text) return '<div class="empty">Нет изменений</div>';
-  return text.split('\n').map((line) => {
-    const e = esc(line);
-    if (/^\+/.test(line) && !/^\+\+\+/.test(line)) return `<span class="add">${e}</span>`;
-    if (/^-/.test(line) && !/^---/.test(line)) return `<span class="del">${e}</span>`;
-    if (/^@@/.test(line)) return `<span class="hunk">${e}</span>`;
-    if (/^(diff |index |\+\+\+|---|new file|deleted)/.test(line)) return `<span class="meta">${e}</span>`;
-    return e;
-  }).join('\n');
+// diff с нумерацией строк (gutter), как в VS Code / GitHub
+function renderDiff(text) {
+  if (!text || !text.trim()) return '<div class="empty">Нет изменений</div>';
+  let oldLn = 0, newLn = 0;
+  const rows = [];
+  const row = (cls, o, n, content) =>
+    `<div class="dl ${cls}"><span class="gut">${o === '' ? '' : o}</span><span class="gut">${n === '' ? '' : n}</span><span class="dc">${esc(content) || '&nbsp;'}</span></div>`;
+  for (const line of text.split('\n')) {
+    if (/^(diff |index |--- |\+\+\+ |new file|deleted file|old mode|new mode|similarity|rename |Binary )/.test(line)) {
+      rows.push(row('meta', '', '', line)); continue;
+    }
+    const hm = line.match(/^@@ -(\d+)(?:,\d+)? \+(\d+)(?:,\d+)? @@/);
+    if (hm) { oldLn = +hm[1]; newLn = +hm[2]; rows.push(row('hunk', '', '', line)); continue; }
+    if (line.startsWith('+')) { rows.push(row('add', '', newLn, line)); newLn++; }
+    else if (line.startsWith('-')) { rows.push(row('del', oldLn, '', line)); oldLn++; }
+    else if (line.startsWith('\\')) { rows.push(row('meta', '', '', line)); }
+    else { rows.push(row('ctx', oldLn, newLn, line)); oldLn++; newLn++; }
+  }
+  return `<div class="difftable">${rows.join('')}</div>`;
 }
 function esc(s) { return String(s == null ? '' : s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])); }
 

@@ -77,6 +77,9 @@ ipcMain.handle('git:info', async (_e, repo) => {
   return { isRepo: true, branch, aheadBehind: ab };
 });
 ipcMain.handle('git:log', (_e, repo) => git.log(repo));
+ipcMain.handle('git:logGraph', (_e, repo) => git.logGraph(repo));
+ipcMain.handle('git:commitStat', (_e, { repo, hash }) => git.commitStat(repo, hash));
+ipcMain.handle('git:changeStats', (_e, repo) => git.changeStats(repo));
 ipcMain.handle('git:status', (_e, repo) => git.status(repo));
 ipcMain.handle('git:diffFile', (_e, { repo, file, staged }) => git.diffFile(repo, file, { staged }));
 ipcMain.handle('git:commitFiles', (_e, { repo, hash }) => git.commitFiles(repo, hash));

@@ -57,16 +57,20 @@
       <section class="content">
         <!-- История -->
         <div class="view" id="view-history">
-          <div class="split">
+          <div class="split split-history">
             <div class="pane list-pane">
-              <div class="pane-head">Коммиты <button id="refreshLog" class="mini">⟳</button></div>
-              <div id="commitList" class="commit-list"></div>
+              <div class="pane-head">Коммиты <span id="commitCount" class="count-pill"></span><button id="refreshLog" class="mini right">⟳</button></div>
+              <div id="graphScroll" class="graph-scroll">
+                <svg id="graphSvg" class="graph-svg" xmlns="http://www.w3.org/2000/svg"></svg>
+                <div id="commitList" class="commit-list graph-list"></div>
+              </div>
             </div>
             <div class="pane detail-pane">
-              <div class="pane-head" id="commitHead">Выберите коммит</div>
-              <div class="detail-body">
+              <div id="commitDetail" class="commit-detail"><div class="empty">Выберите коммит для просмотра</div></div>
+              <div class="detail-split">
+                <div class="subhead">Изменённые файлы <span id="commitFilesCount" class="count-pill"></span></div>
                 <div id="commitFiles" class="file-list"></div>
-                <pre id="commitDiff" class="diff"></pre>
+                <div id="commitDiff" class="diff"></div>
               </div>
             </div>
           </div>
@@ -88,20 +92,25 @@
               <div class="group-label">Не в индексе</div>
               <div id="unstagedList" class="file-list"></div>
               <div class="commit-box">
-                <textarea id="commitMsg" placeholder="Сообщение коммита…"></textarea>
+                <input id="commitSummary" class="commit-summary" type="text" placeholder="Кратко (summary)" />
+                <textarea id="commitMsg" placeholder="Описание (необязательно)…"></textarea>
                 <label class="amend-lbl"><input type="checkbox" id="amendChk" /> amend (изменить последний коммит)</label>
-                <button id="btnCommit" class="primary block">✓ Закоммитить</button>
+                <button id="btnCommit" class="primary block">✓ Закоммитить в <span id="commitBranch">—</span></button>
               </div>
             </div>
             <div class="pane detail-pane">
               <div class="pane-head" id="changeHead">Diff</div>
-              <pre id="changeDiff" class="diff"></pre>
+              <div id="changeDiff" class="diff"></div>
             </div>
           </div>
         </div>
 
         <!-- Сборка 1С -->
         <div class="view hidden" id="view-onec">
+          <div class="page-head">
+            <h2>Сборка и заливка 1С</h2>
+            <p>Разбор/сборка конфигурации и расширений, заливка в Конфигуратор, запуск базы. Все операции — в консоли снизу.</p>
+          </div>
           <div class="onec-grid">
             <div class="field">
               <label>Платформа (1cv8.exe)</label>
