@@ -247,6 +247,11 @@ select:focus, input:focus, textarea:focus { border-color: var(--fg-muted); box-s
 .row-edit input { background: var(--canvas); }
 .del-row { background: transparent; border: 1px solid var(--border); border-radius: var(--radius); color: var(--fg-muted); cursor: pointer; font-size: 14px; padding: 4px 8px; }
 .del-row:hover { color: var(--danger); border-color: var(--danger); }
+.base-card { display: flex; align-items: center; gap: 10px; padding: 10px 12px; margin-bottom: 8px; background: var(--canvas); border: 1px solid var(--border); border-radius: var(--radius); }
+.base-info { flex: 1; min-width: 0; }
+.base-name { font-weight: 600; display: flex; align-items: center; gap: 8px; }
+.base-type { font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: .5px; color: var(--fg-muted); border: 1px solid var(--border); border-radius: 20px; padding: 0 7px; }
+.base-loc { font-size: 12px; color: var(--fg-muted); font-family: var(--mono); margin-top: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .hint { margin-left: 12px; color: var(--success); font-size: 12px; }
 
 /* ---------- Console ---------- */

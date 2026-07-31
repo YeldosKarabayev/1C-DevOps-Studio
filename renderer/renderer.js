@@ -106,12 +106,18 @@ function fillPlatformSelect() {
   }).join('') || '<option value="">— платформа не найдена —</option>';
   if (settings.activePlatform) sel.value = settings.activePlatform;
 }
+function baseLoc(b) {
+  if (b.kind === 'server') {
+    const p = b.port && String(b.port).trim() && String(b.port).trim() !== '1541' ? ':' + String(b.port).trim() : '';
+    return `${b.server}${p}\\${b.ref}`;
+  }
+  return b.path || '';
+}
 function fillBaseSelect() {
   const sel = $('#baseSelect');
-  sel.innerHTML = (settings.bases || []).map((b, i) => {
-    const loc = b.kind === 'server' ? `${b.server}\\${b.ref}` : b.path;
-    return `<option value="${i}">${esc(b.name)} — ${esc(loc || '')}</option>`;
-  }).join('') || '<option value="">— базы не заданы (Настройки) —</option>';
+  sel.innerHTML = (settings.bases || []).map((b, i) =>
+    `<option value="${i}">${esc(b.name)} — ${esc(baseLoc(b))}</option>`).join('')
+    || '<option value="">— базы не заданы (Настройки) —</option>';
   sel.onchange = () => {
     const b = settings.bases[sel.value];
     if (b && b.extension && !$('#extName').value) $('#extName').value = b.extension;
@@ -456,7 +462,7 @@ async function onecAction(op) {
 // ---------- Settings ----------
 function wireSettings() {
   $('#addRepo').onclick = () => { settings.repos.push({ name: 'repo', path: '' }); renderSettings(); };
-  $('#addBase').onclick = () => { settings.bases.push({ name: 'base', kind: 'file', path: '', server: '', ref: '', user: '', pass: '', extension: '' }); renderSettings(); };
+  $('#addBase').onclick = () => editBase(-1);
   $('#saveSettings').onclick = async () => {
     collectSettings();
     const ok = await api.settings.save(settings);
@@ -473,34 +479,75 @@ function renderSettings() {
       <button class="del-row" data-del-repo="${i}">✕</button>
     </div>`).join('');
   $('#baseRows').innerHTML = settings.bases.map((b, i) => `
-    <div class="row-edit base" data-i="${i}">
-      <input class="b-name" value="${esc(b.name)}" placeholder="имя" />
-      <input class="b-loc" value="${esc(b.kind === 'server' ? (b.server + '\\\\' + b.ref) : b.path)}" placeholder="файл-путь или сервер\\база" />
-      <input class="b-user" value="${esc(b.user || '')}" placeholder="user" />
-      <input class="b-pass" value="${esc(b.pass || '')}" placeholder="pass" type="password" />
+    <div class="base-card">
+      <div class="base-info">
+        <div class="base-name">${esc(b.name)} <span class="base-type">${b.kind === 'server' ? 'сервер' : 'файл'}</span></div>
+        <div class="base-loc">${esc(baseLoc(b))}${b.extension ? ' · расш: ' + esc(b.extension) : ''}${b.user ? ' · ' + esc(b.user) : ''}</div>
+      </div>
+      <button class="mini" data-edit-base="${i}">Изменить</button>
       <button class="del-row" data-del-base="${i}">✕</button>
-    </div>`).join('');
+    </div>`).join('') || '<div class="empty">Баз нет — добавьте кнопкой ниже</div>';
   $$('[data-del-repo]').forEach((b) => b.onclick = () => { settings.repos.splice(+b.dataset.delRepo, 1); renderSettings(); });
-  $$('[data-del-base]').forEach((b) => b.onclick = () => { settings.bases.splice(+b.dataset.delBase, 1); renderSettings(); });
+  $$('[data-edit-base]').forEach((b) => b.onclick = () => editBase(+b.dataset.editBase));
+  $$('[data-del-base]').forEach((b) => b.onclick = () => { settings.bases.splice(+b.dataset.delBase, 1); api.settings.save(settings); renderSettings(); fillBaseSelect(); });
+}
+
+async function editBase(index) {
+  const nb = await baseEditor(index >= 0 ? settings.bases[index] : null);
+  if (!nb) return;
+  if (index >= 0) settings.bases[index] = nb; else settings.bases.push(nb);
+  api.settings.save(settings);
+  renderSettings(); fillBaseSelect();
+}
+
+function baseEditor(existing) {
+  const b = Object.assign({ name: '', kind: 'server', path: '', server: '', port: '', ref: '', user: '', pass: '', extension: '' }, existing || {});
+  return new Promise((resolve) => {
+    $('#modalTitle').textContent = existing ? 'Изменить базу' : 'Добавить базу';
+    $('#modalBody').innerHTML = `
+      <div><label>Название</label><input id="be-name" value="${esc(b.name)}" placeholder="напр. TEST_BUH3" /></div>
+      <div><label>Тип</label><select id="be-kind">
+        <option value="server"${b.kind === 'server' ? ' selected' : ''}>Серверная</option>
+        <option value="file"${b.kind === 'file' ? ' selected' : ''}>Файловая</option>
+      </select></div>
+      <div class="be-file"><label>Путь к базе (папка с 1Cv8.1CD)</label>
+        <div style="display:flex;gap:8px"><input id="be-path" style="flex:1" value="${esc(b.path)}" /><button id="be-pick" class="mini" type="button">📁</button></div></div>
+      <div class="be-srv" style="display:flex;gap:10px">
+        <div style="flex:2"><label>Сервер</label><input id="be-server" value="${esc(b.server)}" placeholder="192.168.18.232" /></div>
+        <div style="flex:1"><label>Порт</label><input id="be-port" value="${esc(b.port)}" placeholder="1541" /></div></div>
+      <div class="be-srv"><label>Имя базы на сервере</label><input id="be-ref" value="${esc(b.ref)}" placeholder="TEST_BUH3_BASE" /></div>
+      <div style="display:flex;gap:10px">
+        <div style="flex:1"><label>Пользователь</label><input id="be-user" value="${esc(b.user)}" /></div>
+        <div style="flex:1"><label>Пароль</label><input id="be-pass" type="password" value="${esc(b.pass)}" /></div></div>
+      <div><label>Расширение (для push/бэкапа расширения)</label><input id="be-ext" value="${esc(b.extension)}" placeholder="напр. ЭВР_Доработки" /></div>`;
+    const toggle = () => {
+      const k = $('#be-kind').value;
+      $$('#modalBody .be-file').forEach((e) => e.style.display = k === 'file' ? '' : 'none');
+      $$('#modalBody .be-srv').forEach((e) => e.style.display = k === 'server' ? '' : 'none');
+    };
+    $('#be-kind').onchange = toggle; toggle();
+    $('#be-pick').onclick = async () => { const d = await api.dialog.pickDir(); if (d) $('#be-path').value = d; };
+    $('#modal').classList.remove('hidden');
+    const cleanup = () => { $('#modal').classList.add('hidden'); $('#modalOk').onclick = null; $('#modalCancel').onclick = null; };
+    $('#modalOk').onclick = () => {
+      const kind = $('#be-kind').value;
+      const nb = { name: $('#be-name').value.trim(), kind, user: $('#be-user').value.trim(), pass: $('#be-pass').value, extension: $('#be-ext').value.trim() };
+      if (kind === 'file') nb.path = $('#be-path').value.trim();
+      else { nb.server = $('#be-server').value.trim(); nb.port = $('#be-port').value.trim(); nb.ref = $('#be-ref').value.trim(); }
+      if (!nb.name) { toastConsole('Укажите название базы', 'stderr'); return; }
+      if (kind === 'server' && (!nb.server || !nb.ref)) { toastConsole('Укажите сервер и имя базы', 'stderr'); return; }
+      if (kind === 'file' && !nb.path) { toastConsole('Укажите путь к базе', 'stderr'); return; }
+      cleanup(); resolve(nb);
+    };
+    $('#modalCancel').onclick = () => { cleanup(); resolve(null); };
+  });
 }
 function collectSettings() {
   settings.repos = $$('#repoRows .row-edit').map((row) => ({
     name: row.querySelector('.r-name').value.trim(),
     path: row.querySelector('.r-path').value.trim(),
   })).filter((r) => r.path);
-  settings.bases = $$('#baseRows .row-edit').map((row) => {
-    const loc = row.querySelector('.b-loc').value.trim();
-    const isServer = loc.includes('\\') && !/^[a-zA-Z]:\\/.test(loc);
-    const b = {
-      name: row.querySelector('.b-name').value.trim(),
-      user: row.querySelector('.b-user').value.trim(),
-      pass: row.querySelector('.b-pass').value,
-      extension: '',
-    };
-    if (isServer) { const [s, r] = loc.split('\\'); b.kind = 'server'; b.server = s; b.ref = r; }
-    else { b.kind = 'file'; b.path = loc; }
-    return b;
-  }).filter((b) => b.name);
+  // базы управляются через редактор (baseEditor) и сохраняются сразу — здесь не трогаем
   settings.v8unpackPython = $('#pyPath').value.trim();
   settings.backupDir = $('#backupDir').value.trim();
   settings.activePlatform = $('#platformSelect').value;
