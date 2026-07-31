@@ -135,10 +135,11 @@
               <button class="act" data-op="v8extract">Распаковать .cf/.cfe/.epf (v8unpack)…</button>
             </div>
             <div class="card">
-              <div class="card-title">Собрать</div>
+              <div class="card-title">Собрать в .cf</div>
               <p class="card-desc">Исходники → бинарный файл</p>
-              <button class="act" data-op="dumpCfg">Выгрузить .cf/.cfe из БД…</button>
-              <button class="act" data-op="v8build">Собрать .cf/.cfe/.epf из папки…</button>
+              <button class="act primary-act" data-op="buildCfFromXml">🔨 Из XML (DumpConfigToFiles) → .cf…</button>
+              <button class="act" data-op="dumpCfg">Выгрузить .cf/.cfe из живой БД…</button>
+              <button class="act" data-op="v8build">Из v8unpack-исходников → .cf/.cfe/.epf…</button>
             </div>
             <div class="card">
               <div class="card-title">Залить в Конфигуратор</div>

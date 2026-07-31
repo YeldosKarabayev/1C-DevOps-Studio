@@ -164,6 +164,7 @@ ipcMain.handle('onec:exec', async (_e, req) => {
       case 'probeLock': r = await onec.probeLock(exe, base, streamer); break;
       case 'dumpIB': r = await onec.dumpIB(exe, base, req.file, streamer); break;
       case 'pushExtension': r = await onec.pushExtension(req.repo, streamer); break;
+      case 'buildCfFromXml': r = await onec.buildCfFromXml(exe, req.dir, req.file, ext, streamer); break;
       default: streamer(`Неизвестная операция: ${op}\n`, 'stderr');
     }
   } catch (err) {
