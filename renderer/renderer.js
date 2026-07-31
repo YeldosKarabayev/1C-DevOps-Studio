@@ -579,6 +579,10 @@ function collectSettings() {
 let running = false;
 function wireConsole() {
   $('#clearConsole').onclick = () => { $('#consoleBody').innerHTML = ''; _curLine = null; };
+  $('#copyConsole').onclick = async () => {
+    try { await navigator.clipboard.writeText($('#consoleBody').innerText); const b = $('#copyConsole'); const t = b.textContent; b.textContent = 'Скопировано ✓'; setTimeout(() => b.textContent = t, 1200); }
+    catch (_) { toastConsole('Не удалось скопировать', 'stderr'); }
+  };
   $('#toggleConsole').onclick = () => {
     const c = $('#console'); consoleCollapsed = !consoleCollapsed;
     c.style.height = consoleCollapsed ? '41px' : consoleHeight + 'px';

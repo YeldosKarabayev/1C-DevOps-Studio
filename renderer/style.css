@@ -330,3 +330,9 @@ body.resizing .console { transition: none; }
 ::-webkit-scrollbar-thumb:hover { background: rgba(140,140,140,.75); background-clip: padding-box; }
 ::-webkit-scrollbar-track { background: transparent; }
 .empty { padding: 28px 16px; color: var(--fg3); text-align: center; font-size: 13px; }
+
+/* выделяемый/копируемый текст (консоль, diff, детали коммита, находки) */
+.console-body, .diff, .difftable, .commit-detail, .cd-msg, .cd-meta,
+.lint-msg, .lint-code, .lint-loc {
+  -webkit-user-select: text; user-select: text; cursor: auto;
+}
