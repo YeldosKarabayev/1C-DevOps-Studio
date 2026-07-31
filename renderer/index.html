@@ -161,8 +161,10 @@
             </div>
             <div class="card">
               <div class="card-title">Бэкап</div>
-              <p class="card-desc">Перед рискованной заливкой</p>
-              <button class="act" data-op="dumpCfg">Бэкап .cf/.cfe…</button>
+              <p class="card-desc">В папку бэкапов, авто-имя с датой</p>
+              <button class="act primary-act" data-op="autoBackup">🗄 Основная конфигурация (1 клик)</button>
+              <button class="act" data-op="autoBackupExt">🧩 Расширение (из поля «Расширение»)</button>
+              <button class="act" data-op="dumpCfg">Указать путь вручную…</button>
               <button class="act" data-op="dumpIB">Бэкап базы .dt…</button>
             </div>
           </div>
@@ -190,6 +192,10 @@
           </div>
           <div class="settings-block">
             <h3>Прочее</h3>
+            <div class="field">
+              <label>Папка бэкапов</label>
+              <div style="display:flex;gap:8px"><input id="backupDir" type="text" style="flex:1" /><button id="pickBackupDir" class="mini">📁</button></div>
+            </div>
             <div class="field">
               <label>Python для v8unpack</label>
               <input id="pyPath" type="text" />

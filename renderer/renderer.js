@@ -19,6 +19,7 @@ async function init() {
   fillPlatformSelect();
   fillBaseSelect();
   $('#pyPath').value = settings.v8unpackPython || '';
+  $('#backupDir').value = settings.backupDir || '';
   wireNav();
   wireConsole();
   wireGitActions();
@@ -362,6 +363,7 @@ function wireExtra() {
   };
   // Clone
   $('#pickCloneDir').onclick = async () => { const d = await api.dialog.pickDir(); if (d) $('#cloneDir').value = d; };
+  $('#pickBackupDir').onclick = async () => { const d = await api.dialog.pickDir(); if (d) { $('#backupDir').value = d; settings.backupDir = d; api.settings.save(settings); } };
   $('#btnClone').onclick = async () => {
     const url = $('#cloneUrl').value.trim();
     const dir = $('#cloneDir').value.trim();
@@ -412,11 +414,21 @@ async function onecAction(op) {
   const req = { op, exe, base, ext, python };
 
   const needBase = ['dumpConfigToFiles', 'loadConfigFromFiles', 'dumpCfg', 'loadCfg', 'updateDBCfg',
-    'startEnterprise', 'startDesigner', 'probeLock', 'dumpIB'];
+    'startEnterprise', 'startDesigner', 'probeLock', 'dumpIB', 'autoBackup', 'autoBackupExt'];
   if (needBase.includes(op) && !base) { toastConsole('Сначала выберите базу (Настройки)', 'stderr'); return; }
 
   try {
-    if (op === 'pushExtension') {
+    if (op === 'autoBackup' || op === 'autoBackupExt') {
+      // основная конфа — ВСЕГДА без -Extension (не зависит от поля), даже если расширения установлены
+      const useExt = op === 'autoBackupExt' ? ext : '';
+      if (op === 'autoBackupExt' && !useExt) { toastConsole('Укажите имя расширения в поле «Расширение»', 'stderr'); return; }
+      let dir = settings.backupDir;
+      if (!dir) { dir = await api.dialog.pickDir(); if (!dir) return; settings.backupDir = dir; $('#backupDir').value = dir; api.settings.save(settings); }
+      const name = `${sanitizeName(base.name)}_${useExt ? sanitizeName(useExt) : 'config'}_${nowStamp()}.${useExt ? 'cfe' : 'cf'}`;
+      req.op = 'dumpCfg'; req.ext = useExt;
+      req.file = dir.replace(/[\\/]+$/, '') + '\\' + name;
+      toastConsole(`Бэкап ${useExt ? 'расширения «' + useExt + '»' : 'ОСНОВНОЙ конфигурации'} → ${req.file}`, 'cmd');
+    } else if (op === 'pushExtension') {
       req.repo = currentRepoPath();
       if (!req.repo) { toastConsole('Выберите репозиторий БУХ (со scripts/push-ext.ps1)', 'stderr'); return; }
     } else if (op === 'dumpIB') {
@@ -490,6 +502,7 @@ function collectSettings() {
     return b;
   }).filter((b) => b.name);
   settings.v8unpackPython = $('#pyPath').value.trim();
+  settings.backupDir = $('#backupDir').value.trim();
   settings.activePlatform = $('#platformSelect').value;
 }
 
@@ -553,6 +566,8 @@ function renderDiff(text) {
   return `<div class="difftable">${rows.join('')}</div>`;
 }
 function esc(s) { return String(s == null ? '' : s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])); }
+function nowStamp() { const d = new Date(); const p = (n) => String(n).padStart(2, '0'); return `${d.getFullYear()}${p(d.getMonth() + 1)}${p(d.getDate())}_${p(d.getHours())}${p(d.getMinutes())}${p(d.getSeconds())}`; }
+function sanitizeName(s) { return String(s || '').replace(/[^\wА-Яа-яЁё.-]+/g, '_').replace(/^_+|_+$/g, '') || 'base'; }
 
 window.addEventListener('error', (e) => console.error('WINDOW ERROR:', e.message, 'at', e.filename + ':' + e.lineno));
 init().catch((err) => {
