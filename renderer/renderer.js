@@ -420,11 +420,18 @@ async function onecAction(op) {
   const req = { op, exe, base, ext, python };
 
   const needBase = ['dumpConfigToFiles', 'loadConfigFromFiles', 'dumpCfg', 'loadCfg', 'updateDBCfg',
-    'startEnterprise', 'startDesigner', 'probeLock', 'dumpIB', 'autoBackup', 'autoBackupExt'];
+    'startEnterprise', 'startDesigner', 'probeLock', 'dumpIB', 'autoBackup', 'autoBackupExt',
+    'dumpXmlMain', 'dumpXmlExt'];
   if (needBase.includes(op) && !base) { toastConsole('Сначала выберите базу (Настройки)', 'stderr'); return; }
 
   try {
-    if (op === 'autoBackup' || op === 'autoBackupExt') {
+    if (op === 'dumpXmlMain' || op === 'dumpXmlExt') {
+      const useExt = op === 'dumpXmlExt' ? ext : '';
+      if (op === 'dumpXmlExt' && !useExt) { toastConsole('Укажите имя расширения в поле «Расширение»', 'stderr'); return; }
+      const dir = await api.dialog.pickDir(); if (!dir) return;
+      req.op = 'dumpConfigToFiles'; req.ext = useExt; req.dir = dir;
+      toastConsole(`Разбор ${useExt ? 'расширения «' + useExt + '»' : 'ОСНОВНОЙ конфигурации'} в XML → ${dir}`, 'cmd');
+    } else if (op === 'autoBackup' || op === 'autoBackupExt') {
       // основная конфа — ВСЕГДА без -Extension (не зависит от поля), даже если расширения установлены
       const useExt = op === 'autoBackupExt' ? ext : '';
       if (op === 'autoBackupExt' && !useExt) { toastConsole('Укажите имя расширения в поле «Расширение»', 'stderr'); return; }

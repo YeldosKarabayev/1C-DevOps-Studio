@@ -128,10 +128,11 @@
 
           <div class="cards">
             <div class="card">
-              <div class="card-title">Разобрать</div>
-              <p class="card-desc">Конфигурация БД → XML-исходники</p>
-              <button class="act" data-op="dumpConfigToFiles">Конфа БД → XML…</button>
-              <button class="act" data-op="v8extract">Распаковать .cf/.cfe/.epf…</button>
+              <div class="card-title">Разобрать в исходники</div>
+              <p class="card-desc">XML-метаданные + модули .bsl — для VS Code / Cursor / EDT и git</p>
+              <button class="act primary-act" data-op="dumpXmlMain">📄 Основная конфигурация → XML…</button>
+              <button class="act" data-op="dumpXmlExt">🧩 Расширение → XML…</button>
+              <button class="act" data-op="v8extract">Распаковать .cf/.cfe/.epf (v8unpack)…</button>
             </div>
             <div class="card">
               <div class="card-title">Собрать</div>
