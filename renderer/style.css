@@ -335,3 +335,17 @@ select:focus, input:focus, textarea:focus { border-color: var(--fg-muted); box-s
 /* commit box summary */
 .commit-summary { width: 100%; margin-bottom: 8px; font-weight: 600; }
 #commitBranch { font-family: var(--mono); font-weight: 700; }
+
+/* ============ resizable gutters ============ */
+.rz { position: relative; }
+.console { position: relative; }
+.gutter { position: absolute; z-index: 6; background: transparent; transition: background .1s, opacity .1s; }
+.gutter::after { content: ''; position: absolute; background: var(--border); }
+.gutter-col { top: 0; bottom: 0; width: 7px; cursor: col-resize; }
+.gutter-col::after { top: 0; bottom: 0; left: 3px; width: 1px; }
+.gutter-row { left: 0; right: 0; height: 7px; cursor: row-resize; }
+.gutter-row::after { left: 0; right: 0; top: 3px; height: 1px; }
+.gutter:hover { background: var(--fg-muted); opacity: .45; }
+body.resizing { user-select: none; }
+body.resizing .gutter { background: var(--fg-muted); opacity: .6; }
+body.resizing .console { transition: none; }

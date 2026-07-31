@@ -8,6 +8,8 @@ let settings = null;
 let repo = null;          // текущий путь репозитория
 let selCommit = null;
 let selChangeFile = null;
+let consoleHeight = 200, consoleCollapsed = false;
+const _resizers = [];
 
 // ---------- init ----------
 async function init() {
@@ -23,8 +25,65 @@ async function init() {
   wireOnec();
   wireSettings();
   wireExtra();
+  setupResizers();
   repo = currentRepoPath();
   await refreshRepo();
+}
+
+// ---------- Resizable panes ----------
+function relayoutResizers() { _resizers.forEach((fn) => fn()); }
+
+function colResizer(container, key, def, min, max) {
+  if (!container) return;
+  container.classList.add('rz');
+  const g = document.createElement('div'); g.className = 'gutter gutter-col'; container.appendChild(g);
+  let w = parseInt(localStorage.getItem(key), 10) || def;
+  const apply = () => { container.style.gridTemplateColumns = w + 'px 1fr'; g.style.left = (w - 3) + 'px'; };
+  apply(); _resizers.push(apply);
+  g.addEventListener('mousedown', (e) => {
+    e.preventDefault(); const sx = e.clientX, sw = w; document.body.classList.add('resizing');
+    const mm = (ev) => { w = Math.max(min, Math.min(max, sw + (ev.clientX - sx))); apply(); };
+    const mu = () => { document.body.classList.remove('resizing'); localStorage.setItem(key, w); window.removeEventListener('mousemove', mm); window.removeEventListener('mouseup', mu); };
+    window.addEventListener('mousemove', mm); window.addEventListener('mouseup', mu);
+  });
+}
+
+function rowResizer(container, el, key, def, min, max) {
+  if (!container || !el) return;
+  container.classList.add('rz');
+  const g = document.createElement('div'); g.className = 'gutter gutter-row'; container.appendChild(g);
+  el.style.flex = 'none'; el.style.maxHeight = 'none';
+  let h = parseInt(localStorage.getItem(key), 10) || def;
+  const apply = () => { el.style.height = h + 'px'; g.style.top = (el.offsetTop + h - 3) + 'px'; };
+  apply(); _resizers.push(apply);
+  g.addEventListener('mousedown', (e) => {
+    e.preventDefault(); const sy = e.clientY, sh = h; document.body.classList.add('resizing');
+    const mm = (ev) => { h = Math.max(min, Math.min(max, sh + (ev.clientY - sy))); apply(); };
+    const mu = () => { document.body.classList.remove('resizing'); localStorage.setItem(key, h); window.removeEventListener('mousemove', mm); window.removeEventListener('mouseup', mu); };
+    window.addEventListener('mousemove', mm); window.addEventListener('mouseup', mu);
+  });
+}
+
+function consoleResizer() {
+  const con = $('#console');
+  consoleHeight = parseInt(localStorage.getItem('rz.console'), 10) || 200;
+  con.style.height = consoleHeight + 'px';
+  const g = document.createElement('div'); g.className = 'gutter gutter-row'; g.style.top = '-3px'; con.appendChild(g);
+  g.addEventListener('mousedown', (e) => {
+    e.preventDefault(); const sy = e.clientY, sh = con.offsetHeight; document.body.classList.add('resizing');
+    const mm = (ev) => { consoleHeight = Math.max(41, Math.min(640, sh - (ev.clientY - sy))); con.style.height = consoleHeight + 'px'; consoleCollapsed = consoleHeight <= 44; };
+    const mu = () => { document.body.classList.remove('resizing'); localStorage.setItem('rz.console', consoleHeight); window.removeEventListener('mousemove', mm); window.removeEventListener('mouseup', mu); };
+    window.addEventListener('mousemove', mm); window.addEventListener('mouseup', mu);
+  });
+}
+
+function setupResizers() {
+  colResizer($('.split-history'), 'rz.hist.col', 420, 240, 1000);
+  rowResizer($('#view-history .detail-split'), $('#commitFiles'), 'rz.hist.files', 200, 90, 640);
+  colResizer($('#view-changes .split'), 'rz.chg.col', 360, 240, 1000);
+  rowResizer($('#view-changes .list-pane'), $('#stagedList'), 'rz.chg.staged', 150, 60, 400);
+  consoleResizer();
+  window.addEventListener('resize', relayoutResizers);
 }
 
 function currentRepoPath() {
@@ -67,6 +126,7 @@ function wireNav() {
     const view = btn.dataset.view;
     $$('.view').forEach((v) => v.classList.add('hidden'));
     $(`#view-${view}`).classList.remove('hidden');
+    relayoutResizers();
     if (view === 'history') loadLog();
     if (view === 'changes') loadStatus();
     if (view === 'settings') renderSettings();
@@ -438,8 +498,9 @@ let running = false;
 function wireConsole() {
   $('#clearConsole').onclick = () => { $('#consoleBody').innerHTML = ''; };
   $('#toggleConsole').onclick = () => {
-    const c = $('#console'); c.classList.toggle('collapsed');
-    $('#toggleConsole').textContent = c.classList.contains('collapsed') ? '▴' : '▾';
+    const c = $('#console'); consoleCollapsed = !consoleCollapsed;
+    c.style.height = consoleCollapsed ? '41px' : consoleHeight + 'px';
+    $('#toggleConsole').textContent = consoleCollapsed ? '▴' : '▾';
   };
   api.onProc((kind, d) => {
     if (kind === 'begin') { setSpinner(true); $('#consoleTitle').textContent = d.title; appendConsole(`\n▶ ${d.title}\n`, 'cmd'); }
