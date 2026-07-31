@@ -20,8 +20,9 @@ function createWindow() {
     height: 820,
     minWidth: 980,
     minHeight: 640,
-    backgroundColor: '#0f1115',
+    backgroundColor: '#1e1e1e',
     title: '1С DevOps Studio',
+    frame: false,
     autoHideMenuBar: true,
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
@@ -47,6 +48,11 @@ app.whenReady().then(() => {
   app.on('activate', () => { if (BrowserWindow.getAllWindows().length === 0) createWindow(); });
 });
 app.on('window-all-closed', () => { if (process.platform !== 'darwin') app.quit(); });
+
+// ---------- Управление окном ----------
+ipcMain.handle('win:min', () => win && win.minimize());
+ipcMain.handle('win:max', () => { if (!win) return; if (win.isMaximized()) win.unmaximize(); else win.maximize(); });
+ipcMain.handle('win:close', () => win && win.close());
 
 // ---------- Settings ----------
 ipcMain.handle('settings:get', () => settings.load());

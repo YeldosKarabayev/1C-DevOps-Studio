@@ -2,6 +2,11 @@
 const { contextBridge, ipcRenderer } = require('electron');
 
 contextBridge.exposeInMainWorld('api', {
+  win: {
+    minimize: () => ipcRenderer.invoke('win:min'),
+    maximize: () => ipcRenderer.invoke('win:max'),
+    close: () => ipcRenderer.invoke('win:close'),
+  },
   settings: {
     get: () => ipcRenderer.invoke('settings:get'),
     save: (data) => ipcRenderer.invoke('settings:save', data),

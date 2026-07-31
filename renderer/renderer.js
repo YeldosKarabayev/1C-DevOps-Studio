@@ -66,14 +66,19 @@ function rowResizer(container, el, key, def, min, max) {
   });
 }
 
+function consoleMax() { return Math.max(120, Math.round(($('.main').clientHeight || 600) * 0.45)); }
 function consoleResizer() {
   const con = $('#console');
-  consoleHeight = parseInt(localStorage.getItem('rz.console'), 10) || 200;
+  const stored = parseInt(localStorage.getItem('rz.console'), 10) || 200;
+  // если сохранён «убежавший» размер (больше половины окна) — вернуть нормальные 200
+  consoleHeight = stored > consoleMax() ? 200 : Math.max(41, stored);
+  consoleHeight = Math.min(consoleHeight, consoleMax());
   con.style.height = consoleHeight + 'px';
+  localStorage.setItem('rz.console', consoleHeight);
   const g = document.createElement('div'); g.className = 'gutter gutter-row'; g.style.top = '-3px'; con.appendChild(g);
   g.addEventListener('mousedown', (e) => {
     e.preventDefault(); const sy = e.clientY, sh = con.offsetHeight; document.body.classList.add('resizing');
-    const mm = (ev) => { consoleHeight = Math.max(41, Math.min(640, sh - (ev.clientY - sy))); con.style.height = consoleHeight + 'px'; consoleCollapsed = consoleHeight <= 44; };
+    const mm = (ev) => { consoleHeight = Math.max(41, Math.min(consoleMax(), sh - (ev.clientY - sy))); con.style.height = consoleHeight + 'px'; consoleCollapsed = consoleHeight <= 44; };
     const mu = () => { document.body.classList.remove('resizing'); localStorage.setItem('rz.console', consoleHeight); window.removeEventListener('mousemove', mm); window.removeEventListener('mouseup', mu); };
     window.addEventListener('mousemove', mm); window.addEventListener('mouseup', mu);
   });
@@ -341,6 +346,10 @@ function wireGitActions() {
 }
 
 function wireExtra() {
+  // Кнопки окна (светофор)
+  $('#winMin').onclick = () => api.win.minimize();
+  $('#winMax').onclick = () => api.win.maximize();
+  $('#winClose').onclick = () => api.win.close();
   // Ветки
   $('#branchNew').onclick = async () => {
     const v = await modalPrompt('Новая ветка', [{ key: 'name', label: 'Имя ветки' }]);
