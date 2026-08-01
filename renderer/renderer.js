@@ -10,6 +10,7 @@ let selCommit = null;
 let selChangeFile = null;
 let consoleHeight = 200, consoleCollapsed = false;
 let _curLine = null;
+let _capture = '', _capturing = false;
 const _resizers = [];
 
 // ---------- init ----------
@@ -495,8 +496,17 @@ function wireDeploy() {
 }
 function plLabel(s) { return s === 'running' ? 'выполняется…' : s === 'ok' ? '✓ готово' : s === 'fail' ? '✖ ошибка' : 'ожидание'; }
 function renderPipeline(stages) {
-  $('#pipeline').innerHTML = stages.map((s, i) =>
-    `<div class="pl-row ${s.status || 'pending'}"><span class="pl-dot"></span><span class="pl-title">${i + 1}. ${esc(s.title)}</span><span class="pl-status">${plLabel(s.status)}</span></div>`).join('');
+  $('#pipeline').innerHTML = stages.map((s, i) => {
+    const hasLog = !!(s.log && s.log.trim());
+    const row = `<div class="pl-row ${s.status || 'pending'}${hasLog ? ' has-log' : ''}" data-i="${i}">
+      <span class="pl-dot"></span>
+      <span class="pl-title">${i + 1}. ${esc(s.title)}</span>
+      ${hasLog ? `<span class="pl-toggle">${s.expanded ? '▾' : '▸'} подробнее</span>` : ''}
+      <span class="pl-status">${plLabel(s.status)}</span></div>`;
+    const detail = (s.expanded && hasLog) ? `<pre class="pl-detail">${esc(s.log.trim())}</pre>` : '';
+    return row + detail;
+  }).join('');
+  $$('#pipeline .pl-row.has-log').forEach((row) => row.onclick = () => { const i = +row.dataset.i; stages[i].expanded = !stages[i].expanded; renderPipeline(stages); });
 }
 async function runDeploy() {
   if (running) { toastConsole('Дождитесь завершения текущей операции', 'stderr'); return; }
@@ -524,9 +534,11 @@ async function runDeploy() {
   let failed = false;
   for (const s of stages) {
     s.status = 'running'; renderPipeline(stages);
+    _capture = ''; _capturing = true;
     appendConsole(`\n━━ ${s.title}\n`, 'cmd');
     let r; try { r = await s.fn(); } catch (e) { r = { code: -1 }; appendConsole(String(e && e.message || e) + '\n', 'stderr'); }
-    if (!r || r.code !== 0) { s.status = 'fail'; renderPipeline(stages); appendConsole(`✖ Этап «${s.title}» не пройден (код ${r ? r.code : '?'}). Деплой остановлен.\n`, 'stderr'); failed = true; break; }
+    _capturing = false; s.log = _capture;
+    if (!r || r.code !== 0) { s.status = 'fail'; s.expanded = true; appendConsole(`✖ Этап «${s.title}» не пройден (код ${r ? r.code : '?'}). Деплой остановлен.\n`, 'stderr'); renderPipeline(stages); failed = true; break; }
     s.status = 'ok'; renderPipeline(stages);
   }
   setSpinner(false); $('#btnDeploy').disabled = false;
@@ -648,6 +660,7 @@ function wireConsole() {
 }
 function setSpinner(on) { running = on; $('#spinner').classList.toggle('hidden', !on); $$('.git-actions .tbtn').forEach((b) => b.disabled = on); }
 function appendConsole(text, stream) {
+  if (_capturing) _capture += text;
   const cls = stream === 'cmd' ? 'c-cmd' : stream === 'stderr' ? 'c-err' : (stream === 'ok' ? 'c-ok' : '');
   const body = $('#consoleBody');
   // мини-терминал: \n — новая строка, \r — перезатереть текущую (для прогресс-баров tqdm)
