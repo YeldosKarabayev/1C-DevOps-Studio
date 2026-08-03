@@ -471,6 +471,11 @@ async function onecAction(op) {
       const f = await api.dialog.saveFile({ filters: [{ name: '1С конфигурация', extensions: ['cf'] }] }); if (!f) return;
       req.dir = dir; req.file = f; req.ext = '';
       toastConsole(`Сборка .cf из XML (временная база): ${dir} → ${f}`, 'cmd');
+    } else if (op === 'unpackCfToXml') {
+      const f = await api.dialog.pickFile([{ name: '1С конфигурация', extensions: ['cf', 'cfe'] }]); if (!f) return;
+      const dir = await api.dialog.pickDir(); if (!dir) return;
+      req.file = f; req.dir = dir;
+      toastConsole(`Разбор ${f} → XML+BSL в ${dir}`, 'cmd');
     } else if (op === 'v8extract') {
       const src = await api.dialog.pickFile([{ name: '1С', extensions: ['cf', 'cfe', 'epf', 'erf'] }]); if (!src) return;
       const dst = await api.dialog.pickDir(); if (!dst) return; req.src = src; req.dst = dst;

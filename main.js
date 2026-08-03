@@ -172,6 +172,7 @@ ipcMain.handle('onec:exec', async (_e, req) => {
       case 'pushExtension': r = await onec.pushExtension(req.repo, streamer); break;
       case 'buildCfFromXml': r = await onec.buildCfFromXml(exe, req.dir, req.file, ext, streamer); break;
       case 'validateXml': r = await onec.validateXml(exe, req.dir, ext, streamer); break;
+      case 'unpackCfToXml': r = await onec.unpackCfToXml(exe, req.file, req.dir, ext, streamer); break;
       default: streamer(`Неизвестная операция: ${op}\n`, 'stderr');
     }
   } catch (err) {
