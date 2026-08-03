@@ -16,6 +16,12 @@
       </div>
       <div class="titlebar-title">1С DevOps Studio</div>
     </div>
+    <div id="updateBanner" class="update-banner hidden">
+      <span id="updateText"></span>
+      <div class="spacer"></div>
+      <button id="updateInstall" class="banner-btn hidden">Перезапустить и установить</button>
+      <button id="updateDismiss" class="banner-x">✕</button>
+    </div>
     <div class="app">
     <!-- Sidebar -->
     <aside class="sidebar">
@@ -247,6 +253,15 @@
               <div style="display:flex;gap:8px"><input id="cloneDir" type="text" style="flex:1" placeholder="куда клонировать" /><button id="pickCloneDir" class="mini">📁</button></div>
             </div>
             <button id="btnClone" class="primary">Clone</button>
+          </div>
+          <div class="settings-block">
+            <h3>Обновления</h3>
+            <div class="upd-row">
+              <div>Текущая версия: <b id="appVersion">—</b></div>
+              <div class="spacer"></div>
+              <span id="updStatus" class="hint2"></span>
+              <button id="btnCheckUpdate" class="mini">Проверить обновления</button>
+            </div>
           </div>
           <div class="settings-block">
             <h3>Прочее</h3>

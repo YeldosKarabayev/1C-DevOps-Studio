@@ -30,6 +30,7 @@ async function init() {
   wireExtra();
   wireDeploy();
   fillDeploySelects();
+  wireUpdates();
   setupResizers();
   repo = currentRepoPath();
   await refreshRepo();
@@ -488,6 +489,31 @@ async function onecAction(op) {
     }
     await run(() => api.onec.exec(req), null);
   } catch (e) { toastConsole(String(e), 'stderr'); }
+}
+
+// ---------- Автообновление ----------
+async function wireUpdates() {
+  try { $('#appVersion').textContent = await api.update.version(); } catch (_) {}
+  $('#btnCheckUpdate').onclick = async () => {
+    $('#updStatus').textContent = 'Проверка…';
+    const r = await api.update.check();
+    if (r && r.dev) $('#updStatus').textContent = 'Только в установленной версии (не в dev-режиме)';
+    else if (r && r.error) $('#updStatus').textContent = 'Ошибка: ' + r.error;
+    else if (r && r.ok) $('#updStatus').textContent = 'Проверка запущена';
+  };
+  $('#updateInstall').onclick = () => api.update.install();
+  $('#updateDismiss').onclick = () => $('#updateBanner').classList.add('hidden');
+  api.update.onStatus(onUpdateStatus);
+}
+function onUpdateStatus(d) {
+  const banner = $('#updateBanner'), text = $('#updateText'), install = $('#updateInstall'), st = $('#updStatus');
+  if (st) {
+    st.textContent = ({ checking: 'Проверка обновлений…', none: 'Установлена последняя версия',
+      available: `Найдено обновление ${d.version}, загрузка…`, downloading: `Загрузка… ${d.percent}%`,
+      downloaded: `Обновление ${d.version} готово`, error: 'Ошибка: ' + (d.message || '') })[d.state] || '';
+  }
+  if (d.state === 'downloading') { banner.classList.remove('hidden'); text.textContent = `Загрузка обновления… ${d.percent}%`; install.classList.add('hidden'); }
+  else if (d.state === 'downloaded') { banner.classList.remove('hidden'); text.textContent = `Обновление ${d.version} загружено и готово к установке`; install.classList.remove('hidden'); }
 }
 
 // ---------- Деплой (CD-конвейер) ----------

@@ -299,6 +299,15 @@ input[type="checkbox"]:focus { box-shadow: 0 0 0 3px var(--sel); }
 }
 .btn-deploy { margin-top: 20px; padding: 11px 22px; font-size: 14px; }
 
+/* ---------- Обновления ---------- */
+.update-banner { display: flex; align-items: center; gap: 12px; padding: 8px 16px; background: rgba(35,131,226,.12); border-bottom: 1px solid rgba(35,131,226,.3); font-size: 13px; color: var(--fg); }
+.banner-btn { background: var(--accent); color: #fff; border: none; border-radius: var(--r); padding: 5px 14px; font-weight: 600; cursor: pointer; font-size: 12.5px; }
+.banner-btn:hover { filter: brightness(1.08); }
+.banner-x { background: transparent; border: none; color: var(--fg2); cursor: pointer; font-size: 13px; padding: 2px 6px; border-radius: 4px; }
+.banner-x:hover { background: var(--hover); color: var(--fg); }
+.upd-row { display: flex; align-items: center; gap: 12px; }
+.hint2 { font-size: 12px; color: var(--fg2); }
+
 /* ---------- Settings (grouped, inset) ---------- */
 #view-settings { padding: 24px; overflow-y: auto; background: var(--grouped); }
 .settings-block { background: var(--card); border: 1px solid var(--hair); border-radius: var(--r-lg); padding: 18px; margin-bottom: 16px; max-width: 840px; box-shadow: var(--shadow-sm); }

@@ -7,6 +7,12 @@ contextBridge.exposeInMainWorld('api', {
     maximize: () => ipcRenderer.invoke('win:max'),
     close: () => ipcRenderer.invoke('win:close'),
   },
+  update: {
+    version: () => ipcRenderer.invoke('update:version'),
+    check: () => ipcRenderer.invoke('update:check'),
+    install: () => ipcRenderer.invoke('update:install'),
+    onStatus: (cb) => ipcRenderer.on('update:status', (_e, d) => cb(d)),
+  },
   settings: {
     get: () => ipcRenderer.invoke('settings:get'),
     save: (data) => ipcRenderer.invoke('settings:save', data),

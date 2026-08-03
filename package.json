@@ -10,12 +10,45 @@
   "author": "YeldosKarabayev",
   "license": "MIT",
   "devDependencies": {
-    "electron": "^33.0.0"
+    "electron": "^33.0.0",
+    "electron-builder": "^26.15.3"
   },
   "build": {
     "appId": "kz.evrika.onec-devops-studio",
-    "productName": "1С DevOps Studio",
-    "files": ["main.js", "preload.js", "lib/**/*", "renderer/**/*"],
-    "win": { "target": "nsis" }
+    "productName": "1C DevOps Studio",
+    "icon": "icon.ico",
+    "files": [
+      "main.js",
+      "preload.js",
+      "lib/**/*",
+      "renderer/**/*",
+      "!**/*.map"
+    ],
+    "directories": {
+      "output": "dist"
+    },
+    "publish": [
+      { "provider": "generic", "url": "http://192.168.18.232:8090/updates/" }
+    ],
+    "win": {
+      "target": [
+        "nsis"
+      ],
+      "icon": "icon.ico"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "1С DevOps Studio",
+      "installerIcon": "icon.ico",
+      "uninstallerIcon": "icon.ico",
+      "artifactName": "1C-DevOps-Studio-Setup-${version}.${ext}"
+    }
+  },
+  "dependencies": {
+    "electron-updater": "^6.8.9"
   }
 }

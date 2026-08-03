@@ -1,5 +1,6 @@
 'use strict';
 const { app, BrowserWindow, ipcMain, dialog } = require('electron');
+const { autoUpdater } = require('electron-updater');
 const path = require('path');
 const git = require('./lib/git');
 const onec = require('./lib/onec');
@@ -42,11 +43,32 @@ function createWindow() {
   if (process.env.ONEC_DEVTOOLS) win.webContents.openDevTools({ mode: 'detach' });
 }
 
+function setupUpdater() {
+  autoUpdater.autoDownload = true;
+  autoUpdater.autoInstallOnAppQuit = true;
+  autoUpdater.on('checking-for-update', () => send('update:status', { state: 'checking' }));
+  autoUpdater.on('update-available', (i) => send('update:status', { state: 'available', version: i.version }));
+  autoUpdater.on('update-not-available', () => send('update:status', { state: 'none', version: app.getVersion() }));
+  autoUpdater.on('download-progress', (p) => send('update:status', { state: 'downloading', percent: Math.round(p.percent || 0) }));
+  autoUpdater.on('update-downloaded', (i) => send('update:status', { state: 'downloaded', version: i.version }));
+  autoUpdater.on('error', (e) => send('update:status', { state: 'error', message: String(e && e.message || e) }));
+  if (app.isPackaged) { autoUpdater.checkForUpdates().catch(() => {}); }
+}
+
 app.whenReady().then(() => {
   settings.setPath(path.join(app.getPath('userData'), 'settings.json'));
   createWindow();
+  setupUpdater();
   app.on('activate', () => { if (BrowserWindow.getAllWindows().length === 0) createWindow(); });
 });
+
+ipcMain.handle('update:version', () => app.getVersion());
+ipcMain.handle('update:check', async () => {
+  if (!app.isPackaged) return { dev: true };
+  try { const r = await autoUpdater.checkForUpdates(); return { ok: true, version: r && r.updateInfo && r.updateInfo.version }; }
+  catch (e) { return { error: String(e && e.message || e) }; }
+});
+ipcMain.handle('update:install', () => { setImmediate(() => autoUpdater.quitAndInstall(false, true)); });
 app.on('window-all-closed', () => { if (process.platform !== 'darwin') app.quit(); });
 
 // ---------- Управление окном ----------
